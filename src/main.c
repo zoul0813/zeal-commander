@@ -160,24 +160,24 @@ int main(void) {
     char path[PATH_MAX];
 
     // path_left
-    printf("path_resolve:left\n");
+    // printf("path_resolve:left\n");
     err = path_resolve(list_left.path, original_path, path);
     if(err != ERR_SUCCESS) {
         printf("path_resolve: %d\n", err);
         exit(err);
     }
     strcpy(list_left.path, path);
-    printf("list_left: %s\n", list_left.path);
+    // printf("list_left: %s\n", list_left.path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
         printf("stat:left: %s\n", list_left.path);
         exit(err);
     }
-    printf("path:left : %s\n", list_left.path);
+    // printf("path:left : %s\n", list_left.path);
     // exit(0);
 
     // path_right
-    printf("path_resolve:right\n");
+    // printf("path_resolve:right\n");
     err = path_resolve(list_right.path, original_path, path);
     if(err != ERR_SUCCESS) {
         printf("path_resolve: %d\n", err);
@@ -189,7 +189,7 @@ int main(void) {
         printf("stat:right: %s\n", list_right.path);
         exit(err);
     }
-    printf("path:right: %s\n", list_right.path);
+    // printf("path:right: %s\n", list_right.path);
     // exit(0);
 
     win_ListingLeft.title = list_left.path;
