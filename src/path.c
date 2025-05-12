@@ -5,22 +5,67 @@
 #include "path.h"
 
 
+/**
+ * Return a resolved path, parsing `../` markers up a directory
+ *
+ * @note This will call `opendir()` at the end 
+ *
+ * @param path The path to resolve
+ * @param root The root path to resolve against, must contain an `X:/` drive root
+ * @param resolved The string pointer to return the resolved path to
+ *
+ * @returns ERR_SUCCESS on success, error code else.
+ */
 zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
+    if(strlen(path) < 1) return ERR_INVALID_PARAMETER;
+    if(strlen(root) < 3) return ERR_INVALID_PARAMETER; // must be a drive root
+
+    char a, b, c;
+
+    // goto the root of root
+    a = root[0];
+    b = root[1];
+    c = root[2];
+    if(b != PATH_DRIVE && b != PATH_SEPARATOR) {
+        // root must contain an X:/ drive
+        return ERR_INVALID_PARAMETER;
+    }
+
     printf("path:a: %s\n", path);
     // copy the root to the resolved
     strcpy(resolved, root);
 
+    uint8_t i = 0;
     uint8_t l = strlen(resolved);
     if(l == 0) return ERR_INVALID_PARAMETER;
     printf("resolved:a: %s\n", resolved);
 
+    // if path starts with root, resolve to X:/
+    if(path[0] == PATH_SEPARATOR) {
+        resolved[3] = NULL_TERM;
+        i = 1;
+        l = 3;
+    }
+    printf("resolved:b: %s\n", resolved);
+
+    a = path[0];
+    b = path[1];
+    c = path[2];
+    if(b == PATH_DRIVE && c == PATH_SEPARATOR) {
+        resolved[0] = path[0];
+        resolved[1] = path[1];
+        resolved[2] = path[2];
+        i = 3;
+        l = 3;
+    }
+    printf("resolved:c: %s\n", resolved);
+
     // resolve `..` parent markers
-    uint8_t i = 0;
     do {
-        char a = path[i];
+        a = path[i];
         if(a == NULL_TERM) break; // reached end of path
-        char b = path[i+1];
-        char c = path[i+2];
+        b = path[i+1];
+        c = path[i+2];
 
         if(b == PATH_DRIVE && c == PATH_SEPARATOR) {
             // new root is the drive
@@ -37,8 +82,10 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
             // skip the trailing /
             printf("parent:z: %s %d\n", resolved, l);
             printf("parent:char: %d\n", resolved[l]);
+            if(l == 0) return ERR_INVALID_PATH;
             l--;
             if(resolved[l] == PATH_SEPARATOR) {
+                if(l == 0) return ERR_INVALID_PATH;
                 l--;
                 resolved[l] = NULL_TERM;
             }
@@ -63,12 +110,13 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
     } while(1);
 
     resolved[l] = NULL_TERM;
-    printf("resolved:b: %s\n", resolved);
+    printf("resolved:z: %s\n", resolved);
 
     if(resolved[l-1] != PATH_SEPARATOR) {
-        zos_err_t err = opendir(resolved);
-        if(err == ERR_NOT_A_DIR) {
-            return resolved;
+        zos_dev_t err = opendir(resolved);
+        if(err >= 0) close(err); // if we opened a dir, close it
+        if(err == -ERR_NOT_A_DIR) {
+            return ERR_SUCCESS;
         }
         resolved[l++] = PATH_SEPARATOR;
         resolved[l] = NULL_TERM;

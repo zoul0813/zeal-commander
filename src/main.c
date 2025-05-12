@@ -81,8 +81,7 @@ const char original_path[PATH_MAX];
 zos_stat_t zos_stat;
 zc_list_t list_left = {
     .root = "H:/",
-    // .path = "test2/../test1/"
-    .path = "H:/test2/../test1/../test2"
+    .path = "/test2/../test1/../test2"
 };
 zc_list_t list_right = {
     .root = "H:/",
@@ -161,7 +160,12 @@ int main(void) {
     char path[PATH_MAX];
 
     // path_left
-    path_resolve(list_left.path, original_path, path);
+    printf("path_resolve:left\n");
+    err = path_resolve(list_left.path, original_path, path);
+    if(err != ERR_SUCCESS) {
+        printf("path_resolve: %d\n", err);
+        exit(err);
+    }
     strcpy(list_left.path, path);
     printf("list_left: %s\n", list_left.path);
     err = stat(list_left.path, &zos_stat);
@@ -173,7 +177,12 @@ int main(void) {
     // exit(0);
 
     // path_right
-    path_resolve(list_right.path, original_path, path);
+    printf("path_resolve:right\n");
+    err = path_resolve(list_right.path, original_path, path);
+    if(err != ERR_SUCCESS) {
+        printf("path_resolve: %d\n", err);
+        exit(err);
+    }
     strcpy(list_right.path, path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
