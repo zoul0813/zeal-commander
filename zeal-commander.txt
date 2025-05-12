@@ -1,0 +1,13 @@
+.TH zeal-commander 1 "10 May 2025" zeal-commander "zeal-commander manual"
+.SH NAME
+zeal-commander \- Short description of the project
+.SH SYNOPSIS
+zeal-commander
+.SH DESCRIPTION
+Short description of the project
+.SH OPTIONS
+
+.SH SEE ALSO
+
+.SH BUGS
+No known bugs.
