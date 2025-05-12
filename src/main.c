@@ -9,6 +9,7 @@
 #include "keyboard.h"
 #include "windows.h"
 #include "shared.h"
+#include "path.h"
 #include "fs.h"
 
 static zos_err_t err = ERR_SUCCESS;
@@ -21,6 +22,13 @@ typedef enum {
     // VIEW_FILE_SAVE,
     // VIEW_FILE_LOAD,
 } View;
+
+typedef struct {
+    const char root[PATH_MAX];
+    const char path[PATH_MAX];
+    uint8_t len;
+    zc_entry_t files[MAX_FILE_ENTRIES];
+} zc_list_t;
 
 View active_view = VIEW_NONE;
 View previous_view = VIEW_NONE;
@@ -68,12 +76,19 @@ window_t win_ListingRight = {
     .title = "/"
 };
 
-const char path_left[256] = "H:/test2/";
-zc_entry_t files_left[MAX_FILE_ENTRIES] = {{0}};
-uint8_t files_left_len = 0;
-const char path_right[256] = "H:/test1/";
-zc_entry_t files_right[MAX_FILE_ENTRIES] = {{0}};
-uint8_t files_right_len = 0;
+
+const char original_path[PATH_MAX];
+zos_stat_t zos_stat;
+zc_list_t list_left = {
+    .root = "H:/",
+    // .path = "test2/../test1/"
+    .path = "H:/test2/../test1/../test2"
+};
+zc_list_t list_right = {
+    .root = "H:/",
+    // .path = "test1/"
+    .path = "H:/test1/"
+};
 
 void view_switch(View view) {
     previous_view = active_view;
@@ -119,10 +134,10 @@ void handle_keypress(char key) {
     }
 }
 
-void show_file_list(window_t *window, zc_entry_t* files, uint8_t size) {
+void show_file_list(window_t *window, zc_list_t *list) {
     uint8_t i;
-    for(i = 0; i < size; i++) {
-        zc_entry_t *entry = &files[i];
+    for(i = 0; i < list->len; i++) {
+        zc_entry_t *entry = &list->files[i];
         char prefix = ' ';
         uint8_t color = COLOR(FG_SECONDARY, BG_SECONDARY);
         if(entry->flags & FileFlag_Executable) {
@@ -139,23 +154,55 @@ void show_file_list(window_t *window, zc_entry_t* files, uint8_t size) {
     setcolor(FG_PRIMARY, BG_PRIMARY);
 }
 
-
 int main(void) {
     printf("Zeal Commander\n");
-    win_ListingLeft.title = path_left;
-    err = list(path_left, files_left, &files_left_len);
+    curdir(original_path); // record the original system path
+    printf("current_path: %s\n", original_path);
+    char path[PATH_MAX];
+
+    // path_left
+    path_resolve(list_left.path, original_path, path);
+    strcpy(list_left.path, path);
+    printf("list_left: %s\n", list_left.path);
+    err = stat(list_left.path, &zos_stat);
+    if(err != ERR_SUCCESS) {
+        printf("stat:left: %s\n", list_left.path);
+        exit(err);
+    }
+    printf("path:left : %s\n", list_left.path);
+    // exit(0);
+
+    // path_right
+    path_resolve(list_right.path, original_path, path);
+    strcpy(list_right.path, path);
+    err = stat(list_left.path, &zos_stat);
+    if(err != ERR_SUCCESS) {
+        printf("stat:right: %s\n", list_right.path);
+        exit(err);
+    }
+    printf("path:right: %s\n", list_right.path);
+    // exit(0);
+
+    win_ListingLeft.title = list_left.path;
+    err = list(list_left.path, list_left.files, &list_left.len);
     if(err != ERR_SUCCESS) {
         handle_error(err, "opendir left", 1);
     }
 
-    win_ListingRight.title = path_right;
-    err = list(path_right, files_right, &files_right_len);
+    win_ListingRight.title = list_right.path;
+    err = list(list_right.path, list_right.files, &list_right.len);
     if(err != ERR_SUCCESS) {
         handle_error(err, "opendir right", 1);
     }
 
     err = kb_mode((void *)(KB_READ_NON_BLOCK | KB_MODE_RAW));
     handle_error(err, "init keyboard", 1);
+
+
+    err = ioctl(DEV_STDOUT, CMD_CLEAR_SCREEN, NULL);
+    if(err != ERR_SUCCESS) {
+        handle_error(err, "clear_screen", 1);
+    }
 
     SET_CURSOR_BLINK(0);
 
@@ -172,13 +219,13 @@ int main(void) {
     window(&win_ListingLeft);
     window(&win_ListingRight);
 
-    show_file_list(&win_ListingLeft, files_left, files_left_len);
-    show_file_list(&win_ListingRight, files_right, files_right_len);
+    show_file_list(&win_ListingLeft, &list_left);
+    show_file_list(&win_ListingRight, &list_right);
 
     while(1) {
         key = getkey();
         handle_keypress(key);
     }
 
-    return 0;
+    // return 0; // unreachable
 }

@@ -109,10 +109,8 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
         zc_entry_t *entry = &list[i];
         memcpy(entry->name, dir_entry.d_name, FILENAME_LEN_MAX);
         if(D_ISFILE(dir_entry.d_flags)) {
-            char filename[256] = {0};
-            int l = strlen(path);
-            memcpy(filename, path, l);
-            memcpy(&filename[l], dir_entry.d_name, strlen(dir_entry.d_name));
+            char filename[PATH_MAX] = {0};
+            sprintf(filename, "%s%s", path, dir_entry.d_name);
             err = stat(filename, &entry_stat);
             if(err != ERR_SUCCESS) {
                 printf("stat err: %s\n", filename);

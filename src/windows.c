@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <zvb_gfx.h>
+#include <zvb_hardware.h>
 
 #include "windows.h"
 

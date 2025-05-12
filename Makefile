@@ -13,14 +13,18 @@ include $(ZVB_SDK_PATH)/sdcc/base_sdcc.mk
 all::
 	mkdir $(OUTPUT_DIR)/tmp
 	mkdir $(OUTPUT_DIR)/test1
-	mkdir $(OUTPUT_DIR)/test2
 	touch $(OUTPUT_DIR)/test1/file1a.txt
 	touch $(OUTPUT_DIR)/test1/file1b.txt
+	cp $(OUTPUT_DIR)/zc.bin $(OUTPUT_DIR)/test1/simple.bin
+
+	mkdir $(OUTPUT_DIR)/test2
+	cp $(OUTPUT_DIR)/zc.bin $(OUTPUT_DIR)/test2/test.bin
 	touch $(OUTPUT_DIR)/test2/file2a.txt
 	echo "Hello World" > $(OUTPUT_DIR)/test2/hello.txt
 	cp -R $(OUTPUT_DIR)/test1 $(OUTPUT_DIR)/test2
 	cp -R $(OUTPUT_DIR)/test1 $(OUTPUT_DIR)/test2/alpha
 	cp -R $(OUTPUT_DIR)/test1 $(OUTPUT_DIR)/test2/beta
+	cp $(OUTPUT_DIR)/zc.bin $(OUTPUT_DIR)/test2/test.bin
 
 native: all
 	$(EMU_NATIVE_BIN) -H bin -r $(EMU_NATIVE_ROM)
