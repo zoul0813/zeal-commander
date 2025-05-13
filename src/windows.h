@@ -74,6 +74,14 @@
 #define CH_HLINE        0xC4 // Horizonal line
 #endif
 
+#ifndef CH_TLINE
+#define CH_TLINE        0xC2
+#endif
+
+#ifndef CH_TLINEI
+#define CH_TLINEI       0xC1
+#endif
+
 #ifndef CH_VLINE
 #define CH_VLINE        0xB3 // Vertical line
 #endif
@@ -107,9 +115,11 @@ inline void text_map_vram(void);
 inline void text_demap_vram(void);
 
 typedef enum {
-  WIN_NONE      = 0,
-  WIN_BORDER    = 1 << 0,
-  WIN_SHADOW    = 1 << 1,
+  WIN_NONE          = 0,
+  WIN_BORDER        = 1 << 0,
+  WIN_SHADOW        = 1 << 1,
+  WIN_TITLE_LEFT    = 1 << 2,
+  WIN_TITLE_RIGHT   = 1 << 3,
 } WindowFlags;
 
 typedef struct {
@@ -131,19 +141,20 @@ typedef struct {
   _window_attrs_t _attrs;
 } window_t;
 
-void window(window_t* window);
-void window_gotox(window_t* window, uint8_t x);
-void window_gotoy(window_t* window, uint8_t y);
-void window_gotoxy(window_t* window, uint8_t x, uint8_t y);
-void window_clrscr(window_t *window);
-void window_clreol(window_t *window);
+void window(window_t* w);
+void window_columns(window_t* w, uint8_t *columns, uint8_t count);
+void window_gotox(window_t* w, uint8_t x);
+void window_gotoy(window_t* w, uint8_t y);
+void window_gotoxy(window_t* w, uint8_t x, uint8_t y);
+void window_clrscr(window_t* w);
+void window_clreol(window_t* w);
 
-uint8_t window_putc(window_t* window, char c);
-uint8_t window_putc_color(window_t* window, char c, uint8_t color);
-uint8_t window_puts(window_t* window, const char* s);
-uint8_t window_puts_color(window_t* window, const char* s, uint8_t color);
-uint8_t window_wherex(window_t* window);
-uint8_t window_wherey(window_t* window);
+uint8_t window_putc(window_t* w, char c);
+uint8_t window_putc_color(window_t* w, char c, uint8_t color);
+uint8_t window_puts(window_t* w, const char* s);
+uint8_t window_puts_color(window_t* w, const char* s, uint8_t color);
+uint8_t window_wherex(window_t* w);
+uint8_t window_wherey(window_t* w);
 
 /* Where does this belong? */
 void text_banner(uint8_t x, uint8_t y, uint8_t centered, const char* s);
@@ -151,6 +162,6 @@ void text_header(uint8_t x, uint8_t y, const char* s);
 void text_menu(uint8_t x, uint8_t y, const char* items);
 
 
-void window_banner(window_t* window, uint8_t x, uint8_t y, uint8_t centered, const char* s);
+void window_banner(window_t* w, uint8_t x, uint8_t y, uint8_t centered, const char* s);
 
 #endif

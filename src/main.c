@@ -28,6 +28,8 @@ typedef struct {
     const char path[PATH_MAX];
     uint8_t len;
     zc_entry_t files[MAX_FILE_ENTRIES];
+    uint8_t selected;
+    window_t *window;
 } zc_list_t;
 
 View active_view = VIEW_NONE;
@@ -59,7 +61,7 @@ window_t win_ListingLeft = {
     .y = 1,
     .w = SCREEN_COL80_WIDTH/2,
     .h = SCREEN_COL80_HEIGHT - 2,
-    .flags = WIN_BORDER,
+    .flags = WIN_BORDER | WIN_TITLE_LEFT,
     .fg = FG_SECONDARY,
     .bg = BG_SECONDARY,
     .title = "/"
@@ -70,7 +72,7 @@ window_t win_ListingRight = {
     .y = 1,
     .w = SCREEN_COL80_WIDTH/2,
     .h = SCREEN_COL80_HEIGHT - 2,
-    .flags = WIN_BORDER,
+    .flags = WIN_BORDER | WIN_TITLE_LEFT,
     .fg = FG_SECONDARY,
     .bg = BG_SECONDARY,
     .title = "/"
@@ -81,13 +83,25 @@ const char original_path[PATH_MAX];
 zos_stat_t zos_stat;
 zc_list_t list_left = {
     .root = "H:/",
-    .path = "/test2/../test1/../test2"
+    .path = "/test2/../test1/../test2",
+    .selected = 2,
+    .window = &win_ListingLeft,
 };
 zc_list_t list_right = {
     .root = "H:/",
     // .path = "test1/"
-    .path = "H:/test1/"
+    .path = "H:/test1/",
+    .selected = 1,
+    .window = &win_ListingRight,
 };
+
+zc_list_t *list_current = &list_left;
+
+void view_switch(View view);
+void toggle_view(View view);
+void show_file_list(zc_list_t *list);
+void file_list_highlight(zc_list_t *list);
+void file_list_select(zc_list_t *list, int8_t index);
 
 void view_switch(View view) {
     previous_view = active_view;
@@ -123,9 +137,22 @@ void view_switch(View view) {
 
 void handle_keypress(char key) {
     switch(key) {
-        case KB_ESC: __exit(ERR_SUCCESS); break;
+        case KB_F10: __exit(ERR_SUCCESS); break;
         case KB_F1: {
             toggle_view(VIEW_HELP);
+        } break;
+        case KB_UP_ARROW: {
+            file_list_select(list_current, list_current->selected - 1);
+        } break;
+        case KB_DOWN_ARROW: {
+            file_list_select(list_current, list_current->selected + 1);
+        } break;
+        case KB_KEY_TAB: {
+            if(list_current == &list_left) {
+                list_current = &list_right;
+            } else {
+                list_current = &list_left;
+            }
         } break;
         default: {
 
@@ -133,23 +160,104 @@ void handle_keypress(char key) {
     }
 }
 
-void show_file_list(window_t *window, zc_list_t *list) {
+void file_list_highlight(zc_list_t *list) {
+
+    uint8_t min_x = list->window->x + 1;
+    uint8_t max_x = list->window->x + list->window->w - 2;
+    uint8_t y = list->window->y + list->selected + 2;  // title + column heading
+    uint8_t x;
+
+    text_map_vram();
+    for(x = min_x; x < max_x; x++) {
+        SCR_COLOR[y][x] = COLOR(TEXT_COLOR_WHITE, TEXT_COLOR_DARK_BLUE);
+    }
+    text_demap_vram();
+}
+
+void file_list_select(zc_list_t *list, int8_t index) {
+    if(index < 0) return; // invalid
+    if(index > list->len) return; // invalid
+    zc_entry_t *previous = &list->files[list->selected - 1]; // -1 because `..` isn't in the list
+    zc_entry_t *next = &list->files[index];
+
+    uint8_t color = COLOR(FG_SECONDARY, BG_SECONDARY);
+    uint8_t min_x = list->window->x + 1;
+    uint8_t max_x = list->window->x + list->window->w - 2;
+    uint8_t y = list->window->y + list->selected + 2;  // title + column heading
+    uint8_t x;
+
+    if(list->selected == 0) {
+        // UP-DIR
+        color = COLOR(FG_FOLDER, BG_SECONDARY);
+    } else if(previous->flags & FileFlag_Directory) {
+        color = COLOR(FG_FOLDER, BG_SECONDARY);
+    } else if(previous->flags & FileFlag_Executable) {
+        color = COLOR(FG_EXEC, BG_SECONDARY);
+    }
+    text_map_vram();
+    for(x = min_x; x < max_x; x++) {
+        SCR_COLOR[y][x] = color;
+    }
+    text_demap_vram();
+
+    list->selected = index;
+    file_list_highlight(list);
+}
+
+void show_file_list(zc_list_t *list) {
+    window_t *window = list->window;
     uint8_t i;
+    uint8_t color = COLOR(FG_HEADING, BG_SECONDARY);
+    const char str[FILENAME_LEN_MAX + 2];
+
+    sprintf(str, "Name");
+    window_puts_color(window, str, color);
+
+    sprintf(str, "Size\n");
+    window_gotox(window, window->w - 2 - strlen(str));
+    window_puts_color(window, str, color);
+
+    color = COLOR(FG_FOLDER, BG_SECONDARY);
+    sprintf(str, "..");
+    window_puts_color(window, str, color);
+
+    sprintf(str, "UP-DIR\n");
+    window_gotox(window, window->w - 2 - strlen(str));
+    window_puts_color(window, str, color);
+
+
     for(i = 0; i < list->len; i++) {
         zc_entry_t *entry = &list->files[i];
         char prefix = ' ';
-        uint8_t color = COLOR(FG_SECONDARY, BG_SECONDARY);
+        char suffix = NULL_TERM;
+        color = COLOR(FG_SECONDARY, BG_SECONDARY);
         if(entry->flags & FileFlag_Executable) {
             color = COLOR(FG_EXEC, BG_SECONDARY);
+            suffix = '*';
         } else if(entry->flags & FileFlag_Directory) {
             color = COLOR(FG_FOLDER, BG_SECONDARY);
             prefix = '/';
         }
-        const char str[FILENAME_LEN_MAX + 2];
-        sprintf(str, "%c%s\n", prefix, entry->name);
-        // printf("%c%s\n", prefix, entry->name);
+
+        uint32_t size = entry->size;
+        char size_suffix = 'B';
+        if(size > KILOBYTE) {
+            size = size / KILOBYTE;
+            size_suffix = 'K';
+        }
+
+        sprintf(str, "%c%s%c", prefix, entry->name, suffix);
+        window_puts_color(window, str, color);
+
+        if(entry->flags & FileFlag_File) {
+            sprintf(str, "%lu%c\n", size, size_suffix);
+        } else {
+            sprintf(str, "-\n");
+        }
+        window_gotox(window, window->w - 2 - strlen(str));
         window_puts_color(window, str, color);
     }
+
     setcolor(FG_PRIMARY, BG_PRIMARY);
 }
 
@@ -218,18 +326,23 @@ int main(void) {
     window(&win_Main);
 
     const char *menu_main = "File Options";
-    setcolor(BG_MENU, FG_MENU); // inverted
+    setcolor(FG_MENU, BG_MENU); // inverted
     text_menu(0, 0, menu_main);
 
-    const char *menu_file = "[F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete";
-    setcolor(FG_MENU, BG_MENU); // inverted
+    const char *menu_file = "[F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F10] Quit";
+    setcolor(BG_MENU, FG_MENU); // inverted
     text_menu(0, SCREEN_COL80_HEIGHT-1, menu_file);
 
-    window(&win_ListingLeft);
-    window(&win_ListingRight);
+    uint8_t columns[] = { 24 };
 
-    show_file_list(&win_ListingLeft, &list_left);
-    show_file_list(&win_ListingRight, &list_right);
+    window_columns(&win_ListingLeft, columns, 1);
+    window_columns(&win_ListingRight, columns, 1);
+
+    show_file_list(&list_left);
+    show_file_list(&list_right);
+
+    file_list_highlight(&list_left);
+    file_list_highlight(&list_left);
 
     while(1) {
         key = getkey();
