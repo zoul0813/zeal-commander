@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <zos_errors.h>
 #include <zos_sys.h>
 #include <zos_vfs.h>
 #include <zos_video.h>
+
 #include "shared.h"
 #include "windows.h"
 
@@ -21,6 +23,17 @@ void handle_error(zos_err_t err, char *msg, uint8_t fatal) {
     printf("failed to %s, %d (%02x)\n", msg, err, err);
     if(fatal) __exit(err);
   }
+}
+
+void message(const char* str, ...) {
+    va_list args;
+    cursor_xy(0, SCREEN_COL80_HEIGHT-2);
+    setcolor(FG_MESSAGE, BG_MESSAGE);
+
+    va_start(args, str);
+    vprintf(str, args);
+    va_end(args);
+    printf("%24s\n", "");
 }
 
 int str_ends_with(const char *str, const char *suffix) {

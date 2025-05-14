@@ -5,12 +5,14 @@
 #include <zos_errors.h>
 
 #include "theme.h"
-
 #include "keyboard.h"
 #include "windows.h"
 #include "shared.h"
 #include "path.h"
 #include "fs.h"
+
+#define entry_get_focus() &list_focus->files[list_focus->selected - 1]
+#define entry_get_blur() &list_focus->files[list_focus->selected - 1]
 
 static zos_err_t err = ERR_SUCCESS;
 unsigned char key = 0;
@@ -35,16 +37,6 @@ typedef struct {
 View active_view = VIEW_NONE;
 View previous_view = VIEW_NONE;
 
-window_t win_Main = {
-  .x = 0,
-  .y = 0,
-  .w = SCREEN_COL80_WIDTH,
-  .h = SCREEN_COL80_HEIGHT,
-  .flags = WIN_NONE,
-  .fg = FG_PRIMARY,
-  .bg = BG_PRIMARY,
-};
-
 window_t win_Help = {
   .x = SCREEN_COL80_WIDTH / 4,
   .y = SCREEN_COL80_HEIGHT / 4,
@@ -60,7 +52,7 @@ window_t win_ListingLeft = {
     .x = 0,
     .y = 1,
     .w = SCREEN_COL80_WIDTH/2,
-    .h = SCREEN_COL80_HEIGHT - 2,
+    .h = SCREEN_COL80_HEIGHT - 3,
     .flags = WIN_BORDER | WIN_TITLE_LEFT,
     .fg = FG_SECONDARY,
     .bg = BG_SECONDARY,
@@ -71,7 +63,7 @@ window_t win_ListingRight = {
     .x = SCREEN_COL80_WIDTH/2,
     .y = 1,
     .w = SCREEN_COL80_WIDTH/2,
-    .h = SCREEN_COL80_HEIGHT - 2,
+    .h = SCREEN_COL80_HEIGHT - 3,
     .flags = WIN_BORDER | WIN_TITLE_LEFT,
     .fg = FG_SECONDARY,
     .bg = BG_SECONDARY,
@@ -80,10 +72,14 @@ window_t win_ListingRight = {
 
 
 const char original_path[PATH_MAX];
+const char path_src[PATH_MAX];
+const char path_dst[PATH_MAX];
+
 zos_stat_t zos_stat;
 zc_list_t list_left = {
     .root = "H:/",
     .path = "/test2",
+    // .path = "/test2/alpha",
     .selected = 2,
     .window = &win_ListingLeft,
 };
@@ -99,7 +95,7 @@ zc_list_t *list_blur = &list_right;
 
 void view_switch(View view);
 void toggle_view(View view);
-void show_file_list(zc_list_t *list);
+void file_list_show(zc_list_t *list);
 void file_list_highlight(zc_list_t *list);
 void file_list_select(zc_list_t *list, int8_t index);
 
@@ -108,7 +104,7 @@ void view_switch(View view) {
     cursor(0);
     switch(view) {
         case VIEW_NONE: {
-            window_clrscr(&win_Main);
+            // TODO: refresh the main display
         } break;
         case VIEW_HELP: {
             // move this into a view!
@@ -138,70 +134,110 @@ void view_switch(View view) {
 void handle_keypress(char key) {
     // [F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F10] Quit
     switch(key) {
-        // quit
-        case KB_F10: __exit(ERR_SUCCESS); break;
         // help
         case KB_F1: {
             toggle_view(VIEW_HELP);
         } break;
         // copy
         case KB_F2: {
-            zc_entry_t *entry_s = &list_focus->files[list_focus->selected - 1];
-            char src[PATH_MAX];
-            err = path_concat(entry_s->name, list_focus->path, src);
-
-            char dst[PATH_MAX];
-            err = path_concat(entry_s->name, list_blur->path, dst);
-
-            if(err == ERR_SUCCESS) {
-                copy(src, dst);
-            } else {
-                printf("ERROR: %d %s\n", err, src);
+            zc_entry_t *entry_s = entry_get_focus();
+            err = path_concat(entry_s->name, list_focus->path, path_src);
+            if(err != ERR_SUCCESS) {
+                message("ERROR: path focus %d %s", err, entry_s->name);
+                break;
             }
-            list(list_blur->path, list_blur->files, &list_blur->len);
+
+            err = path_concat(entry_s->name, list_blur->path, path_dst);
+            if(err != ERR_SUCCESS) {
+                message("ERROR: path blur %d %s", err, entry_s->name);
+                break;
+            }
+
+            err = copy(path_src, path_dst);
+            if(err != ERR_SUCCESS) {
+                message("ERROR: copy %d %s", err, path_src);
+                break;
+            }
+
+            err = list(list_blur->path, list_blur->files, &list_blur->len);
+            if(err != ERR_SUCCESS) {
+                message("ERROR: list %d %s", err, path_src);
+                break;
+            }
+
             window_clrscr(list_blur->window);
-            show_file_list(list_blur);
+            file_list_show(list_blur);
         } break;
         // move
         case KB_F3: {
-            zc_entry_t *entry_s = &list_focus->files[list_focus->selected - 1];
-            char src[PATH_MAX];
-            err = path_concat(entry_s->name, list_focus->path, src);
+            zc_entry_t *entry_s = entry_get_focus();
+            err = path_concat(entry_s->name, list_focus->path, path_src);
 
-            char dst[PATH_MAX];
-            err = path_concat(entry_s->name, list_blur->path, dst);
+            err = path_concat(entry_s->name, list_blur->path, path_dst);
 
             if(err == ERR_SUCCESS) {
-                move(src, dst);
+                move(path_src, path_dst);
             } else {
-                printf("ERROR: %d %s\n", err, src);
+                message("ERROR: %d %s", err, path_src);
             }
 
             list(list_focus->path, list_focus->files, &list_focus->len);
             window_clrscr(list_focus->window);
-            show_file_list(list_focus);
+            file_list_show(list_focus);
 
             list(list_blur->path, list_blur->files, &list_blur->len);
             window_clrscr(list_blur->window);
-            show_file_list(list_blur);
+            file_list_show(list_blur);
         } break;
         // rename
         case KB_F4: {
-
         } break;
         // delete
         case KB_F5: {
-            zc_entry_t *entry = &list_focus->files[list_focus->selected - 1];
-            char str[PATH_MAX];
-            err = path_concat(entry->name, list_focus->path, str);
+            zc_entry_t *entry = entry_get_focus();
+            err = path_concat(entry->name, list_focus->path, path_src);
             if(err == ERR_SUCCESS) {
-                remove(str);
+                remove(path_src);
             } else {
-                printf("ERROR: %d %s\n", err, str);
+                message("ERROR: %d %s", err, path_src);
             }
             list(list_focus->path, list_focus->files, &list_focus->len);
             window_clrscr(list_focus->window); // TODO: instead of clearing the whole thing, just clear whats need to be cleaned up... ?
-            show_file_list(list_focus);
+            file_list_show(list_focus);
+        } break;
+
+        // refresh
+        case KB_F9: {
+            list(list_focus->path, list_focus->files, &list_focus->len);
+            window_clrscr(list_focus->window);
+            file_list_show(list_focus);
+
+            list(list_blur->path, list_blur->files, &list_blur->len);
+            window_clrscr(list_blur->window);
+            file_list_show(list_blur);
+        } break;
+        // quit
+        case KB_F10: __exit(ERR_SUCCESS); break;
+
+        // action
+        case KB_KEY_ENTER: {
+            zc_entry_t *entry = entry_get_focus();
+            if((entry->flags & FileFlag_Directory) == 0) {
+                message("ERROR: not a dir");
+                break;
+            }
+            err = path_concat(entry->name, list_focus->path, path_src);
+            if(err != ERR_SUCCESS) {
+                message("ERROR: concat %d %s", err, path_src);
+                break;
+            }
+
+            strcpy(list_focus->path, path_src);
+            err = list(list_focus->path, list_focus->files, &list_focus->len);
+            if(err != ERR_SUCCESS) {
+                message("ERROR: list %d %s", err, list_focus->path);
+                break;
+            }
         } break;
 
         case KB_UP_ARROW: {
@@ -233,11 +269,19 @@ void file_list_highlight(zc_list_t *list) {
         SCR_COLOR[y][x] = COLOR(TEXT_COLOR_WHITE, TEXT_COLOR_DARK_BLUE);
     }
     text_demap_vram();
+
+    zc_entry_t *entry = entry_get_focus();
+    err = path_concat(entry->name, list_focus->path, path_src);
+    if(err != ERR_SUCCESS) {
+        message("ERROR: concat %d %s", path_src);
+    } else {
+        message("%s", path_src);
+    }
 }
 
 void file_list_select(zc_list_t *list, int8_t index) {
-    if(index < 0) return; // invalid
-    if(index > list->len) return; // invalid
+    // (uint8_t) covers <0 and >len because neg is > 127
+    if((uint8_t)index > list->len) return; // invalid
     zc_entry_t *previous = &list->files[list->selected - 1]; // -1 because `..` isn't in the list
     zc_entry_t *next = &list->files[index];
 
@@ -265,25 +309,25 @@ void file_list_select(zc_list_t *list, int8_t index) {
     file_list_highlight(list);
 }
 
-void show_file_list(zc_list_t *list) {
+void file_list_show(zc_list_t *list) {
     window_t *window = list->window;
     uint8_t i;
     uint8_t color = COLOR(FG_HEADING, BG_SECONDARY);
     const char str[FILENAME_LEN_MAX + 2];
 
     window_gotoxy(window, 0, 0);
-    sprintf(str, "Name");
+    strcpy(str, "Name");
     window_puts_color(window, str, color);
 
-    sprintf(str, "Size\n");
+    strcpy(str, "Size\n");
     window_gotox(window, window->w - 2 - strlen(str));
     window_puts_color(window, str, color);
 
     color = COLOR(FG_FOLDER, BG_SECONDARY);
-    sprintf(str, "..");
+    strcpy(str, "..");
     window_puts_color(window, str, color);
 
-    sprintf(str, "UP-DIR\n");
+    strcpy(str, "UP-DIR\n");
     window_gotox(window, window->w - 2 - strlen(str));
     window_puts_color(window, str, color);
 
@@ -314,26 +358,28 @@ void show_file_list(zc_list_t *list) {
         if(entry->flags & FileFlag_File) {
             sprintf(str, "%lu%c\n", size, size_suffix);
         } else {
-            sprintf(str, "-\n");
+            strcpy(str, "-\n");
         }
         window_gotox(window, window->w - 2 - strlen(str));
         window_puts_color(window, str, color);
     }
 
     setcolor(FG_PRIMARY, BG_PRIMARY);
+
+
+    if(list->selected > list->len) list->selected = list->len;
+    file_list_highlight(list);
 }
 
 void init(void) {
-    char path[PATH_MAX];
-
     // path_left
     // printf("path_resolve:left\n");
-    err = path_resolve(list_left.path, original_path, path);
+    err = path_resolve(list_left.path, original_path, path_src);
     if(err != ERR_SUCCESS) {
         printf("path_resolve: %d\n", err);
         exit(err);
     }
-    strcpy(list_left.path, path);
+    strcpy(list_left.path, path_src);
     printf("list_left: %s\n", list_left.path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
@@ -345,12 +391,12 @@ void init(void) {
 
     // path_right
     printf("path_resolve:right\n");
-    err = path_resolve(list_right.path, original_path, path);
+    err = path_resolve(list_right.path, original_path, path_src);
     if(err != ERR_SUCCESS) {
         printf("path_resolve: %d\n", err);
         exit(err);
     }
-    strcpy(list_right.path, path);
+    strcpy(list_right.path, path_src);
     // printf("list_right: %s\n", list_right.path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
@@ -402,26 +448,23 @@ int main(void) {
 
     SET_CURSOR_BLINK(0);
 
-    window(&win_Main);
-
     const char *menu_main = "File Options";
     setcolor(FG_MENU, BG_MENU); // inverted
     text_menu(0, 0, menu_main);
 
-    const char *menu_file = "[F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F10] Quit";
-    setcolor(BG_MENU, FG_MENU); // inverted
+    const char *menu_file = "[F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F9] Refresh [F10] Quit";
+    setcolor(TEXT_COLOR_DARK_GRAY, FG_MENU); // inverted
     text_menu(0, SCREEN_COL80_HEIGHT-1, menu_file);
 
-    uint8_t columns[] = { 24 };
+    // uint8_t columns[] = { 24 };
 
-    window_columns(&win_ListingLeft, columns, 1);
-    window_columns(&win_ListingRight, columns, 1);
+    // window_columns(&win_ListingLeft, columns, 1);
+    // window_columns(&win_ListingRight, columns, 1);
+    window(&win_ListingLeft);
+    window(&win_ListingRight);
 
-    show_file_list(&list_left);
-    show_file_list(&list_right);
-
-    file_list_highlight(&list_left);
-    file_list_highlight(&list_left);
+    file_list_show(&list_left);
+    file_list_show(&list_right);
 
     while(1) {
         key = getkey();

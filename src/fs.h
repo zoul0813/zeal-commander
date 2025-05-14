@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 #include <zos_errors.h>
 
 #ifndef FS_H
@@ -21,7 +23,6 @@ typedef struct {
     char name[FILENAME_LEN_MAX];
 } zc_entry_t;
 
-zos_err_t tree(const char* path, int depth);
 zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size);
 zos_err_t remove(const char* path);
 zos_err_t move(const char* src, const char* dst);
