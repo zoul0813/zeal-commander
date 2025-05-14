@@ -124,3 +124,9 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
 
     return ERR_SUCCESS;
 }
+
+zos_err_t path_concat(const char* path, const char* root, char *resolved) {
+    strcpy(resolved, root);
+    strcat(resolved, path);
+    return ERR_SUCCESS;
+}

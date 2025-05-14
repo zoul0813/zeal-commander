@@ -83,14 +83,13 @@ const char original_path[PATH_MAX];
 zos_stat_t zos_stat;
 zc_list_t list_left = {
     .root = "H:/",
-    .path = "/test2/../test1/../test2",
+    .path = "/test2",
     .selected = 2,
     .window = &win_ListingLeft,
 };
 zc_list_t list_right = {
     .root = "H:/",
-    // .path = "test1/"
-    .path = "H:/test1/",
+    .path = "/test1",
     .selected = 1,
     .window = &win_ListingRight,
 };
@@ -136,11 +135,41 @@ void view_switch(View view) {
  }
 
 void handle_keypress(char key) {
+    // [F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F10] Quit
     switch(key) {
+        // quit
         case KB_F10: __exit(ERR_SUCCESS); break;
+        // help
         case KB_F1: {
             toggle_view(VIEW_HELP);
         } break;
+        // copy
+        case KB_F2: {
+
+        } break;
+        // move
+        case KB_F3: {
+
+        } break;
+        // rename
+        case KB_F4: {
+
+        } break;
+        // delete
+        case KB_F5: {
+            zc_entry_t *entry = &list_current->files[list_current->selected - 1];
+            char str[PATH_MAX];
+            err = path_concat(entry->name, list_current->path, str);
+            if(err == ERR_SUCCESS) {
+                remove(str);
+            } else {
+                printf("ERROR: %d %s\n", err, str);
+            }
+            list(list_current->path, list_current->files, &list_current->len);
+            window_clrscr(list_current->window); // TODO: instead of clearing the whole thing, just clear whats need to be cleaned up... ?
+            show_file_list(list_current);
+        } break;
+
         case KB_UP_ARROW: {
             file_list_select(list_current, list_current->selected - 1);
         } break;
@@ -210,6 +239,7 @@ void show_file_list(zc_list_t *list) {
     uint8_t color = COLOR(FG_HEADING, BG_SECONDARY);
     const char str[FILENAME_LEN_MAX + 2];
 
+    window_gotoxy(window, 0, 0);
     sprintf(str, "Name");
     window_puts_color(window, str, color);
 
@@ -261,10 +291,7 @@ void show_file_list(zc_list_t *list) {
     setcolor(FG_PRIMARY, BG_PRIMARY);
 }
 
-int main(void) {
-    printf("Zeal Commander\n");
-    curdir(original_path); // record the original system path
-    printf("current_path: %s\n", original_path);
+void init(void) {
     char path[PATH_MAX];
 
     // path_left
@@ -275,7 +302,7 @@ int main(void) {
         exit(err);
     }
     strcpy(list_left.path, path);
-    // printf("list_left: %s\n", list_left.path);
+    printf("list_left: %s\n", list_left.path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
         printf("stat:left: %s\n", list_left.path);
@@ -285,19 +312,31 @@ int main(void) {
     // exit(0);
 
     // path_right
-    // printf("path_resolve:right\n");
+    printf("path_resolve:right\n");
     err = path_resolve(list_right.path, original_path, path);
     if(err != ERR_SUCCESS) {
         printf("path_resolve: %d\n", err);
         exit(err);
     }
     strcpy(list_right.path, path);
+    // printf("list_right: %s\n", list_right.path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
         printf("stat:right: %s\n", list_right.path);
         exit(err);
     }
     // printf("path:right: %s\n", list_right.path);
+    // exit(0);
+
+    // err = path_resolve("hello.txt", list_left.root, path);
+    // if(err != ERR_SUCCESS) {
+    //     printf("path_resolve: %d\n", err);
+    //     exit(err);
+    // }
+    // printf("resolved: %s\n", path);
+
+    // path_concat("hello.txt", list_left.path, path);
+    // printf("concat: %s\n", path);
     // exit(0);
 
     win_ListingLeft.title = list_left.path;
@@ -311,6 +350,14 @@ int main(void) {
     if(err != ERR_SUCCESS) {
         handle_error(err, "opendir right", 1);
     }
+}
+
+int main(void) {
+    printf("Zeal Commander\n");
+    curdir(original_path); // record the original system path
+    printf("current_path: %s\n", original_path);
+
+    init();
 
     err = kb_mode((void *)(KB_READ_NON_BLOCK | KB_MODE_RAW));
     handle_error(err, "init keyboard", 1);

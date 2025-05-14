@@ -142,8 +142,8 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
 
 zos_err_t remove(const char* path)
 {
-    (void *)path;
-    return ERR_FAILURE;
+    zos_err_t err = rm(path);
+    return err;
 }
 
 zos_err_t move(const char* src, const char* dst)
