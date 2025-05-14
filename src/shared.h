@@ -6,8 +6,6 @@
  // video.asm: DEFC DEFAULT_CURSOR_BLINK = 30
 #define DEFAULT_CURSOR_BLINK 30
 
-extern char textbuff[SCREEN_COL80_WIDTH];
-
 int __exit(zos_err_t err);
 void handle_error(zos_err_t err, char *msg, uint8_t fatal);
 void message(const char* str, ...);

@@ -216,7 +216,8 @@ void handle_keypress(char key) {
         case KB_F10: __exit(ERR_SUCCESS); break;
 
         // action
-        case KB_KEY_ENTER: {
+        case KB_KEY_ENTER: // fall-thru
+        case KB_KEY_SPACE: {
             if(list_focus->selected == 0) {
                 err = path_resolve("../", list_focus->path, path_src);
                 if(err != ERR_SUCCESS) {
@@ -224,8 +225,9 @@ void handle_keypress(char key) {
                     break;
                 }
                 strcpy(list_focus->path, path_src);
+                list_focus->selected = 1;
                 file_list_show(list_focus);
-                return;
+                break;
             }
 
             zc_entry_t *entry = entry_get_focus();
@@ -247,16 +249,41 @@ void handle_keypress(char key) {
                 break;
             }
 
+            list_focus->selected = 1;
             strcpy(list_focus->path, path_src);
             file_list_show(list_focus);
         } break;
 
+        case KB_LEFT_ARROW: // fall-thru
         case KB_UP_ARROW: {
             file_list_select(list_focus, list_focus->selected - 1);
         } break;
+
+        case KB_RIGHT_ARROW: // fall-thru
         case KB_DOWN_ARROW: {
             file_list_select(list_focus, list_focus->selected + 1);
         } break;
+
+        case KB_PG_UP: {
+            uint8_t selected = list_focus->selected;
+            if(selected > 10) selected -= 10;
+            else selected = 0;
+            file_list_select(list_focus, selected);
+        } break;
+        case KB_PG_DOWN: {
+            uint8_t selected = list_focus->selected;
+            if(selected + 10 <= list_focus->len) selected += 10;
+            else selected = list_focus->len;
+            file_list_select(list_focus, selected);
+        } break;
+
+        case KB_HOME: {
+            file_list_select(list_focus, 0);
+        } break;
+        case KB_END: {
+            file_list_select(list_focus, list_focus->len);
+        } break;
+
         case KB_KEY_TAB: {
             zc_list_t *t = list_focus;
             list_focus = list_blur;
@@ -407,67 +434,34 @@ void file_list_show(zc_list_t *the_list) {
 
 void init(void) {
     // path_left
-    // printf("path_resolve:left\n");
     err = path_resolve(list_left.path, original_path, path_src);
     if(err != ERR_SUCCESS) {
         printf("path_resolve: %d\n", err);
         exit(err);
     }
     strcpy(list_left.path, path_src);
-    printf("list_left: %s\n", list_left.path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
         printf("stat:left: %s\n", list_left.path);
         exit(err);
     }
-    // printf("path:left : %s\n", list_left.path);
-    // exit(0);
 
     // path_right
-    printf("path_resolve:right\n");
     err = path_resolve(list_right.path, original_path, path_src);
     if(err != ERR_SUCCESS) {
         printf("path_resolve: %d\n", err);
         exit(err);
     }
     strcpy(list_right.path, path_src);
-    // printf("list_right: %s\n", list_right.path);
     err = stat(list_left.path, &zos_stat);
     if(err != ERR_SUCCESS) {
         printf("stat:right: %s\n", list_right.path);
         exit(err);
     }
-    // printf("path:right: %s\n", list_right.path);
-    // exit(0);
-
-    // err = path_resolve("hello.txt", list_left.root, path);
-    // if(err != ERR_SUCCESS) {
-    //     printf("path_resolve: %d\n", err);
-    //     exit(err);
-    // }
-    // printf("resolved: %s\n", path);
-
-    // path_concat("hello.txt", list_left.path, path);
-    // printf("concat: %s\n", path);
-    // exit(0);
-
-    // win_ListingLeft.title = list_left.path;
-    // err = list(list_left.path, list_left.files, &list_left.len);
-    // if(err != ERR_SUCCESS) {
-    //     handle_error(err, "opendir left", 1);
-    // }
-
-    // win_ListingRight.title = list_right.path;
-    // err = list(list_right.path, list_right.files, &list_right.len);
-    // if(err != ERR_SUCCESS) {
-    //     handle_error(err, "opendir right", 1);
-    // }
 }
 
 int main(void) {
-    printf("Zeal Commander\n");
     curdir(original_path); // record the original system path
-    printf("current_path: %s\n", original_path);
 
     init();
 

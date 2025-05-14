@@ -9,8 +9,6 @@
 #include "shared.h"
 #include "windows.h"
 
-char textbuff[SCREEN_COL80_WIDTH];
-
 int __exit(zos_err_t err) {
   if(err == ERR_SUCCESS) err = ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
   exit(err);
