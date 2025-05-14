@@ -210,8 +210,6 @@ void handle_keypress(char key) {
 
         // refresh
         case KB_F9: {
-            list(list_focus->path, list_focus->files, &list_focus->len);
-            window_clrscr(list_focus->window);
             file_list_show(list_focus);
         } break;
         // quit
@@ -219,6 +217,17 @@ void handle_keypress(char key) {
 
         // action
         case KB_KEY_ENTER: {
+            if(list_focus->selected == 0) {
+                err = path_resolve("../", list_focus->path, path_src);
+                if(err != ERR_SUCCESS) {
+                    message("ERROR: resolve UP_DIR %d %s", err, path_src);
+                    break;
+                }
+                strcpy(list_focus->path, path_src);
+                file_list_show(list_focus);
+                return;
+            }
+
             zc_entry_t *entry = entry_get_focus();
             if((entry->flags & FileFlag_Directory) == 0) {
                 message("ERROR: not a dir");
@@ -231,11 +240,15 @@ void handle_keypress(char key) {
             }
 
             strcpy(list_focus->path, path_src);
-            err = list(list_focus->path, list_focus->files, &list_focus->len);
+
+            err = path_resolve(list_focus->path, list_focus->root, path_src);
             if(err != ERR_SUCCESS) {
-                message("ERROR: list %d %s", err, list_focus->path);
+                message("ERROR: resolve %d %s", err, list_focus->path);
                 break;
             }
+
+            strcpy(list_focus->path, path_src);
+            file_list_show(list_focus);
         } break;
 
         case KB_UP_ARROW: {
@@ -269,6 +282,13 @@ void file_list_highlight(zc_list_t *list) {
         SCR_COLOR[y][x] = COLOR(TEXT_COLOR_WHITE, TEXT_COLOR_DARK_BLUE);
     }
     text_demap_vram();
+
+    if(list->selected == 0) {
+        // up dir
+        err = path_resolve("../", list->path, path_src);
+        message("%s", path_src);
+        return;
+    }
 
     zc_entry_t *entry = entry_get_focus();
     err = path_concat(entry->name, list_focus->path, path_src);
@@ -309,31 +329,45 @@ void file_list_select(zc_list_t *list, int8_t index) {
     file_list_highlight(list);
 }
 
-void file_list_show(zc_list_t *list) {
-    window_t *window = list->window;
+void file_list_show(zc_list_t *the_list) {
+    err = list(the_list->path, the_list->files, &the_list->len);
+    if(err != ERR_SUCCESS) {
+        message("ERROR: list UP_DIR %d %s", err, path_src);
+        return;
+    }
+
+    window_t *w = the_list->window;
     uint8_t i;
     uint8_t color = COLOR(FG_HEADING, BG_SECONDARY);
     const char str[FILENAME_LEN_MAX + 2];
 
-    window_gotoxy(window, 0, 0);
+    w->title = the_list->path;
+    window(w);
+    if(w == list_focus->window) {
+        window_active(w, 1);
+    } else {
+        window_active(w, 0);
+    }
+
+    window_gotoxy(w, 0, 0);
     strcpy(str, "Name");
-    window_puts_color(window, str, color);
+    window_puts_color(w, str, color);
 
     strcpy(str, "Size\n");
-    window_gotox(window, window->w - 2 - strlen(str));
-    window_puts_color(window, str, color);
+    window_gotox(w, w->w - 2 - strlen(str));
+    window_puts_color(w, str, color);
 
     color = COLOR(FG_FOLDER, BG_SECONDARY);
     strcpy(str, "..");
-    window_puts_color(window, str, color);
+    window_puts_color(w, str, color);
 
     strcpy(str, "UP-DIR\n");
-    window_gotox(window, window->w - 2 - strlen(str));
-    window_puts_color(window, str, color);
+    window_gotox(w, w->w - 2 - strlen(str));
+    window_puts_color(w, str, color);
 
 
-    for(i = 0; i < list->len; i++) {
-        zc_entry_t *entry = &list->files[i];
+    for(i = 0; i < the_list->len; i++) {
+        zc_entry_t *entry = &the_list->files[i];
         char prefix = ' ';
         char suffix = NULL_TERM;
         color = COLOR(FG_SECONDARY, BG_SECONDARY);
@@ -353,22 +387,22 @@ void file_list_show(zc_list_t *list) {
         }
 
         sprintf(str, "%c%s%c", prefix, entry->name, suffix);
-        window_puts_color(window, str, color);
+        window_puts_color(w, str, color);
 
         if(entry->flags & FileFlag_File) {
             sprintf(str, "%lu%c\n", size, size_suffix);
         } else {
             strcpy(str, "-\n");
         }
-        window_gotox(window, window->w - 2 - strlen(str));
-        window_puts_color(window, str, color);
+        window_gotox(w, w->w - 2 - strlen(str));
+        window_puts_color(w, str, color);
     }
 
     setcolor(FG_PRIMARY, BG_PRIMARY);
 
 
-    if(list->selected > list->len) list->selected = list->len;
-    file_list_highlight(list);
+    if(the_list->selected > the_list->len) the_list->selected = the_list->len;
+    file_list_highlight(the_list);
 }
 
 void init(void) {
@@ -417,17 +451,17 @@ void init(void) {
     // printf("concat: %s\n", path);
     // exit(0);
 
-    win_ListingLeft.title = list_left.path;
-    err = list(list_left.path, list_left.files, &list_left.len);
-    if(err != ERR_SUCCESS) {
-        handle_error(err, "opendir left", 1);
-    }
+    // win_ListingLeft.title = list_left.path;
+    // err = list(list_left.path, list_left.files, &list_left.len);
+    // if(err != ERR_SUCCESS) {
+    //     handle_error(err, "opendir left", 1);
+    // }
 
-    win_ListingRight.title = list_right.path;
-    err = list(list_right.path, list_right.files, &list_right.len);
-    if(err != ERR_SUCCESS) {
-        handle_error(err, "opendir right", 1);
-    }
+    // win_ListingRight.title = list_right.path;
+    // err = list(list_right.path, list_right.files, &list_right.len);
+    // if(err != ERR_SUCCESS) {
+    //     handle_error(err, "opendir right", 1);
+    // }
 }
 
 int main(void) {
@@ -448,26 +482,16 @@ int main(void) {
 
     SET_CURSOR_BLINK(0);
 
-    const char *menu_main = "File Options";
+    const char *menu_main = " File Options";
     setcolor(FG_MENU, BG_MENU); // inverted
     text_menu(0, 0, menu_main);
 
-    const char *menu_file = "[F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F9] Refresh [F10] Quit";
+    const char *menu_file = " [F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F9] Refresh [F10] Quit";
     setcolor(TEXT_COLOR_DARK_GRAY, FG_MENU); // inverted
     text_menu(0, SCREEN_COL80_HEIGHT-1, menu_file);
 
-    // uint8_t columns[] = { 24 };
-
-    // window_columns(&win_ListingLeft, columns, 1);
-    // window_columns(&win_ListingRight, columns, 1);
-    window(&win_ListingLeft);
-    window(&win_ListingRight);
-
     file_list_show(&list_left);
     file_list_show(&list_right);
-
-    window_active(list_focus->window, 1);
-    window_active(list_blur->window, 0);
 
     while(1) {
         key = getkey();
