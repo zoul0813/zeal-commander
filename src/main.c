@@ -266,13 +266,13 @@ void handle_keypress(char key) {
 
         case KB_PG_UP: {
             uint8_t selected = list_focus->selected;
-            if(selected > 10) selected -= 10;
+            if(selected > LIST_PAGE_SIZE) selected -= LIST_PAGE_SIZE;
             else selected = 0;
             file_list_select(list_focus, selected);
         } break;
         case KB_PG_DOWN: {
             uint8_t selected = list_focus->selected;
-            if(selected + 10 <= list_focus->len) selected += 10;
+            if(selected + LIST_PAGE_SIZE <= list_focus->len) selected += LIST_PAGE_SIZE;
             else selected = list_focus->len;
             file_list_select(list_focus, selected);
         } break;

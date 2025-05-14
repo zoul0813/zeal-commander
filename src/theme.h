@@ -25,6 +25,8 @@ typedef enum {
 
 */
 
+#define LIST_PAGE_SIZE   10
+
 #define FG_PRIMARY              TEXT_COLOR_LIGHT_GRAY
 #define FG_PRIMARY_HIGHLIGHT    TEXT_COLOR_WHITE
 #define BG_PRIMARY              TEXT_COLOR_DARK_BLUE
