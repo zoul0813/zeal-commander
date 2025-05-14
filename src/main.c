@@ -56,6 +56,7 @@ window_t win_ListingLeft = {
     .flags = WIN_BORDER | WIN_TITLE_LEFT,
     .fg = FG_SECONDARY,
     .bg = BG_SECONDARY,
+    .fg_highlight = FG_SECONDARY_HIGHLIGHT,
     .title = "/"
 };
 
@@ -66,6 +67,7 @@ window_t win_ListingRight = {
     .h = SCREEN_COL80_HEIGHT - 3,
     .flags = WIN_BORDER | WIN_TITLE_LEFT,
     .fg = FG_SECONDARY,
+    .fg_highlight = FG_SECONDARY_HIGHLIGHT,
     .bg = BG_SECONDARY,
     .title = "/"
 };
@@ -211,10 +213,6 @@ void handle_keypress(char key) {
             list(list_focus->path, list_focus->files, &list_focus->len);
             window_clrscr(list_focus->window);
             file_list_show(list_focus);
-
-            list(list_blur->path, list_blur->files, &list_blur->len);
-            window_clrscr(list_blur->window);
-            file_list_show(list_blur);
         } break;
         // quit
         case KB_F10: __exit(ERR_SUCCESS); break;
@@ -250,6 +248,8 @@ void handle_keypress(char key) {
             zc_list_t *t = list_focus;
             list_focus = list_blur;
             list_blur = t;
+            window_active(list_focus->window, 1);
+            window_active(list_blur->window, 0);
         } break;
         default: {
 
@@ -465,6 +465,9 @@ int main(void) {
 
     file_list_show(&list_left);
     file_list_show(&list_right);
+
+    window_active(list_focus->window, 1);
+    window_active(list_blur->window, 0);
 
     while(1) {
         key = getkey();

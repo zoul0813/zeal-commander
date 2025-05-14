@@ -135,6 +135,7 @@ typedef struct {
   uint8_t h;
   uint8_t fg;
   uint8_t bg;
+  uint8_t fg_highlight;
   uint8_t flags;
   const char* title;
   /* private */
@@ -143,6 +144,7 @@ typedef struct {
 
 void window(window_t* w);
 void window_columns(window_t* w, uint8_t *columns, uint8_t count);
+void window_active(window_t* w, uint8_t active);
 void window_gotox(window_t* w, uint8_t x);
 void window_gotoy(window_t* w, uint8_t y);
 void window_gotoxy(window_t* w, uint8_t x, uint8_t y);
