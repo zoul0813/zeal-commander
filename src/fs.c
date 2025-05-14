@@ -148,16 +148,36 @@ zos_err_t remove(const char* path)
 
 zos_err_t move(const char* src, const char* dst)
 {
-    (void *)src;
-    (void *)dst;
-    return ERR_FAILURE;
+    zos_err_t err;
+    err = copy(src, dst);
+    if(err != ERR_SUCCESS) return err;
+    err = remove(src);
+    return err;
 }
 
 zos_err_t copy(const char* src, const char* dst)
 {
-    (void *)src;
-    (void *)dst;
-    return ERR_FAILURE;
+    zos_err_t err;
+    zos_dev_t s, d;
+
+    s = open(src, O_RDONLY);
+    if(s < 0) return -s;
+
+    d = open(dst, O_WRONLY | O_CREAT);
+    if(d < 0) return -d;
+
+    char buffer[1024];
+    uint16_t size = 1024;;
+
+    do {
+        err = read(s, buffer, &size);
+        err = write(d, buffer, &size);
+    } while(err == ERR_SUCCESS && size > 0);
+
+    err = close(s);
+    if(err != ERR_SUCCESS) return err;
+    err = close(d);
+    return err;
 }
 
 zos_err_t rename(const char* src, const char* dst) {

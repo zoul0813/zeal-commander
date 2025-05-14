@@ -94,7 +94,8 @@ zc_list_t list_right = {
     .window = &win_ListingRight,
 };
 
-zc_list_t *list_current = &list_left;
+zc_list_t *list_focus = &list_left;
+zc_list_t *list_blur = &list_right;
 
 void view_switch(View view);
 void toggle_view(View view);
@@ -145,11 +146,44 @@ void handle_keypress(char key) {
         } break;
         // copy
         case KB_F2: {
+            zc_entry_t *entry_s = &list_focus->files[list_focus->selected - 1];
+            char src[PATH_MAX];
+            err = path_concat(entry_s->name, list_focus->path, src);
 
+            char dst[PATH_MAX];
+            err = path_concat(entry_s->name, list_blur->path, dst);
+
+            if(err == ERR_SUCCESS) {
+                copy(src, dst);
+            } else {
+                printf("ERROR: %d %s\n", err, src);
+            }
+            list(list_blur->path, list_blur->files, &list_blur->len);
+            window_clrscr(list_blur->window);
+            show_file_list(list_blur);
         } break;
         // move
         case KB_F3: {
+            zc_entry_t *entry_s = &list_focus->files[list_focus->selected - 1];
+            char src[PATH_MAX];
+            err = path_concat(entry_s->name, list_focus->path, src);
 
+            char dst[PATH_MAX];
+            err = path_concat(entry_s->name, list_blur->path, dst);
+
+            if(err == ERR_SUCCESS) {
+                move(src, dst);
+            } else {
+                printf("ERROR: %d %s\n", err, src);
+            }
+
+            list(list_focus->path, list_focus->files, &list_focus->len);
+            window_clrscr(list_focus->window);
+            show_file_list(list_focus);
+
+            list(list_blur->path, list_blur->files, &list_blur->len);
+            window_clrscr(list_blur->window);
+            show_file_list(list_blur);
         } break;
         // rename
         case KB_F4: {
@@ -157,31 +191,29 @@ void handle_keypress(char key) {
         } break;
         // delete
         case KB_F5: {
-            zc_entry_t *entry = &list_current->files[list_current->selected - 1];
+            zc_entry_t *entry = &list_focus->files[list_focus->selected - 1];
             char str[PATH_MAX];
-            err = path_concat(entry->name, list_current->path, str);
+            err = path_concat(entry->name, list_focus->path, str);
             if(err == ERR_SUCCESS) {
                 remove(str);
             } else {
                 printf("ERROR: %d %s\n", err, str);
             }
-            list(list_current->path, list_current->files, &list_current->len);
-            window_clrscr(list_current->window); // TODO: instead of clearing the whole thing, just clear whats need to be cleaned up... ?
-            show_file_list(list_current);
+            list(list_focus->path, list_focus->files, &list_focus->len);
+            window_clrscr(list_focus->window); // TODO: instead of clearing the whole thing, just clear whats need to be cleaned up... ?
+            show_file_list(list_focus);
         } break;
 
         case KB_UP_ARROW: {
-            file_list_select(list_current, list_current->selected - 1);
+            file_list_select(list_focus, list_focus->selected - 1);
         } break;
         case KB_DOWN_ARROW: {
-            file_list_select(list_current, list_current->selected + 1);
+            file_list_select(list_focus, list_focus->selected + 1);
         } break;
         case KB_KEY_TAB: {
-            if(list_current == &list_left) {
-                list_current = &list_right;
-            } else {
-                list_current = &list_left;
-            }
+            zc_list_t *t = list_focus;
+            list_focus = list_blur;
+            list_blur = t;
         } break;
         default: {
 
