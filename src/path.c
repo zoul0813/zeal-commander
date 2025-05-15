@@ -33,14 +33,12 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         return ERR_INVALID_PARAMETER;
     }
 
-    // printf("path:a: %s\n", path);
     // copy the root to the resolved
     strcpy(resolved, root);
 
     uint8_t i = 0;
     uint8_t l = strlen(resolved);
     if(l == 0) return ERR_INVALID_PARAMETER;
-    // printf("resolved:a: %s\n", resolved);
 
     // if path starts with root, resolve to X:/
     if(path[0] == PATH_SEPARATOR) {
@@ -48,11 +46,11 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         i = 1;
         l = 3;
     }
-    // printf("resolved:b: %s\n", resolved);
 
     a = path[0];
     b = path[1];
     c = path[2];
+    // path has a drive, use it as new root
     if(b == PATH_DRIVE && c == PATH_SEPARATOR) {
         resolved[0] = path[0];
         resolved[1] = path[1];
@@ -60,7 +58,6 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         i = 3;
         l = 3;
     }
-    // printf("resolved:c: %s\n", resolved);
 
     // resolve `..` parent markers
     do {
@@ -69,36 +66,31 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         b = path[i+1];
         c = path[i+2];
 
-        if(b == PATH_DRIVE && c == PATH_SEPARATOR) {
-            // new root is the drive
-            sprintf(resolved, "%c%c%c", a, b, c);
-            i += 3; // move the pointer past the X:/ drive
-            // printf("path:abs: %s\n", resolved);
-            continue;
-        }
-
-        // printf("abc: %c%c%c %d %d\n", a, b, c, i, l);
+        // if(b == PATH_DRIVE && c == PATH_SEPARATOR) {
+        //     // new root is the drive
+        //     sprintf(resolved, "%c%c%c", a, b, c);
+        //     i += 3; // move the pointer past the X:/ drive
+        //     continue;
+        // }
 
         // find `..`
         if(a == PATH_DOT && b == PATH_DOT && c == PATH_SEPARATOR) {
-            // skip the trailing /
-            // printf("parent:z: %s %d\n", resolved, l);
-            // printf("parent:char: %d\n", resolved[l]);
-            if(l == 0) return ERR_INVALID_PATH;
+            // can't go above the drive root
+            if(l < 3) return ERR_INVALID_PATH;
+
             l--;
             if(resolved[l] == PATH_SEPARATOR) {
                 if(l == 0) return ERR_INVALID_PATH;
                 l--;
                 resolved[l] = NULL_TERM;
             }
-            // printf("parent:a: %s %d\n", resolved, l);
+
             for(;l > 0; l--) {
                 if(resolved[l] == PATH_SEPARATOR) {
                     resolved[l] = NULL_TERM;
                     break;
                 }
             }
-            // printf("parent:b: %s %d\n", resolved, l);
             i += 2;
         } else {
             resolved[l] = a;
@@ -112,7 +104,6 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
     } while(1);
 
     resolved[l] = NULL_TERM;
-    // printf("resolved:z: %s\n", resolved);
 
     if(resolved[l-1] != PATH_SEPARATOR) {
         zos_dev_t err = opendir(resolved);

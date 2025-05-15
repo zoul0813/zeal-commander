@@ -26,7 +26,7 @@ typedef enum {
 } View;
 
 typedef struct {
-    const char root[PATH_MAX];
+    // const char root[PATH_MAX];
     const char path[PATH_MAX];
     uint8_t len;
     zc_entry_t files[MAX_FILE_ENTRIES];
@@ -79,15 +79,12 @@ const char path_dst[PATH_MAX];
 
 zos_stat_t zos_stat;
 zc_list_t list_left = {
-    .root = "H:/",
-    .path = "/test2",
-    // .path = "/test2/alpha",
+    .path = "/",
     .selected = 2,
     .window = &win_ListingLeft,
 };
 zc_list_t list_right = {
-    .root = "H:/",
-    .path = "/test1",
+    .path = "/",
     .selected = 1,
     .window = &win_ListingRight,
 };
@@ -235,15 +232,8 @@ void handle_keypress(char key) {
                 message("ERROR: not a dir");
                 break;
             }
-            err = path_concat(entry->name, list_focus->path, path_src);
-            if(err != ERR_SUCCESS) {
-                message("ERROR: concat %d %s", err, path_src);
-                break;
-            }
 
-            strcpy(list_focus->path, path_src);
-
-            err = path_resolve(list_focus->path, list_focus->root, path_src);
+            err = path_resolve(entry->name, list_focus->path, path_src);
             if(err != ERR_SUCCESS) {
                 message("ERROR: resolve %d %s", err, list_focus->path);
                 break;
@@ -433,6 +423,7 @@ void file_list_show(zc_list_t *the_list) {
 }
 
 void init(void) {
+
     // path_left
     err = path_resolve(list_left.path, original_path, path_src);
     if(err != ERR_SUCCESS) {

@@ -27,4 +27,4 @@ all::
 	cp $(OUTPUT_DIR)/zc.bin $(OUTPUT_DIR)/test2/test.bin
 
 native: all
-	$(EMU_NATIVE_BIN) -H bin -r $(EMU_NATIVE_ROM)
+	$(EMU_NATIVE_BIN) -H bin -r $(EMU_NATIVE_ROM) -t sd-disk.img
