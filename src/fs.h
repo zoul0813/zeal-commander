@@ -14,6 +14,7 @@ typedef enum {
     FileFlag_Directory = 1,
     FileFlag_File = 2,
     FileFlag_Executable = 4,
+    FileFlag_Disk = 8,
 } zc_file_flags;
 
 typedef struct {
@@ -30,5 +31,6 @@ zos_err_t copy(const char* src, const char* dst);
 zos_err_t rename(const char* src, const char* dst);
 zos_err_t exists(const char* src);
 zos_err_t is_dir(const char* src);
+zos_err_t is_disk(const char letter);
 
 #endif

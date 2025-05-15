@@ -10,7 +10,7 @@
 /**
  * Return a resolved path, parsing `../` markers up a directory
  *
- * @note This will call `opendir()` at the end 
+ * @note This will call `opendir()` at the end
  *
  * @param path The path to resolve
  * @param root The root path to resolve against, must contain an `X:/` drive root
@@ -23,16 +23,13 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
     uint8_t i = 0;
     uint8_t l = strlen(root);
 
-    // must have a drive root
-    if(l < 3) return ERR_INVALID_PARAMETER & 0xA0;
-
     a = root[0];
     b = root[1];
     c = root[2];
 
     // root must contain an X:/ drive
     if(b != PATH_DRIVE && c != PATH_SEPARATOR) {
-        return ERR_INVALID_PARAMETER & 0xB0;
+        return ERR_INVALID_PARAMETER;
     }
 
     // root is the current resolved path
@@ -41,7 +38,7 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
     l = strlen(resolved);
 
     // must have a drive root
-    if(l < 3) return ERR_INVALID_PARAMETER & 0xC0;
+    if(l < 3) return ERR_INVALID_PARAMETER;
 
 
     a = path[0];
@@ -56,6 +53,9 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         i = 3;
         l = 3;
     }
+
+    // must have a drive root
+    if(l < 3) return ERR_INVALID_PARAMETER;
 
     // if path starts with root, resolve to X:/
     if(a == PATH_SEPARATOR) {
@@ -74,11 +74,11 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         // find `..`
         if(a == PATH_DOT && b == PATH_DOT && c == PATH_SEPARATOR) {
             // can't go above the drive root
-            if(l < 4) return ERR_INVALID_PATH & 0xD0;
+            if(l < 4) return ERR_DISK_OFFSET;
 
             l--;
             if(resolved[l] == PATH_SEPARATOR) {
-                if(l == 0) return ERR_INVALID_PATH  & 0xE0;
+                if(l == 0) return ERR_INVALID_PATH;
                 l--;
                 resolved[l] = NULL_TERM;
             }
@@ -99,7 +99,7 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
             l++;
             if(l >= PATH_MAX) {
                 resolved[PATH_MAX - 1] = NULL_TERM; // make it printable
-                return ERR_INVALID_PATH  & 0xF0;
+                return ERR_INVALID_PATH;
             }
             i++;
         }

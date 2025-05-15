@@ -137,3 +137,10 @@ zos_err_t is_dir(const char* src) {
     if(err < 0) return -err;
     return close(err);
 }
+
+zos_err_t is_disk(char letter) {
+    char path[] = " :/";
+    if(letter > 'a') letter -= ('a' - 'A'); // to upper
+    path[0] = letter;
+    return is_dir(path);
+}

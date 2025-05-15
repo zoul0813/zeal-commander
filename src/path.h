@@ -10,6 +10,7 @@
 #define PATH_CURRENT    PATH_DOT
 #define PATH_PARENT     '..'
 
+#define ERR_DISK_OFFSET 0xFF
 
 zos_err_t path_resolve(const char* path, const char* root, char *resolved);
 zos_err_t path_concat(const char* path, const char* root, char *resolved);

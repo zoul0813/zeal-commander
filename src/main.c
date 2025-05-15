@@ -77,6 +77,9 @@ const char original_path[PATH_MAX];
 const char path_src[PATH_MAX];
 const char path_dst[PATH_MAX];
 
+zc_entry_t disks[6] = { { 0 } };
+uint8_t disks_len = 0;
+
 zos_stat_t zos_stat;
 zc_list_t list_left = {
     .window = &win_ListingLeft,
@@ -93,6 +96,7 @@ void toggle_view(View view);
 void file_list_show(zc_list_t *list);
 void file_list_highlight(zc_list_t *list);
 void file_list_select(zc_list_t *list, int8_t index);
+void file_list_disks(zc_list_t *list);
 
 void view_switch(View view) {
     previous_view = active_view;
@@ -125,6 +129,7 @@ void view_switch(View view) {
     }
     return view_switch(view);
  }
+
 
 void handle_keypress(char key) {
     // [F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F10] Quit
@@ -213,6 +218,11 @@ void handle_keypress(char key) {
         case KB_KEY_SPACE: {
             if(list_focus->selected == 0) {
                 err = path_resolve("../", list_focus->path, path_src);
+                if(err == ERR_DISK_OFFSET) {
+                    file_list_disks(list_focus);
+                    file_list_show(list_focus);
+                    break;
+                }
                 if(err != ERR_SUCCESS) {
                     error(err, "resolve UP_DIR %s", path_src);
                     break;
@@ -223,19 +233,22 @@ void handle_keypress(char key) {
             }
 
             zc_entry_t *entry = entry_get_focus();
-            if((entry->flags & FileFlag_Directory) == 0) {
+            if((entry->flags & FileFlag_Disk) != 0) {
+                // it's a disk
+                strcpy(list_focus->path, entry->name);
+            } else if((entry->flags & FileFlag_Directory) == 0) {
                 error(ERR_NOT_A_DIR, "entry %s", list_focus->path);
                 break;
-            }
-
-            err = path_resolve(entry->name, list_focus->path, path_src);
-            if(err != ERR_SUCCESS) {
-                error(err, "resolve %s", list_focus->path);
-                break;
+            } else {
+                err = path_resolve(entry->name, list_focus->path, path_src);
+                if(err != ERR_SUCCESS) {
+                    error(err, "resolve %s", list_focus->path);
+                    break;
+                }
+                strcpy(list_focus->path, path_src);
             }
 
             list_focus->selected = 1;
-            strcpy(list_focus->path, path_src);
             file_list_show(list_focus);
         } break;
 
@@ -342,10 +355,12 @@ void file_list_select(zc_list_t *list, int8_t index) {
 }
 
 void file_list_show(zc_list_t *the_list) {
-    err = list(the_list->path, the_list->files, &the_list->len);
-    if(err != ERR_SUCCESS) {
-        error(err, "list UP_DIR %s",path_src);
-        return;
+    if(strlen(the_list->path) > 0) {
+        err = list(the_list->path, the_list->files, &the_list->len);
+        if(err != ERR_SUCCESS) {
+            error(err, "list %s",path_src);
+            return;
+        }
     }
 
     window_t *w = the_list->window;
@@ -417,10 +432,37 @@ void file_list_show(zc_list_t *the_list) {
     file_list_highlight(the_list);
 }
 
+void file_list_disks(zc_list_t *the_list) {
+    // show the disk list
+    the_list->len = disks_len;
+    strcpy(the_list->path, "");
+    for(uint8_t i = 0; i < disks_len; i++) {
+        memcpy(&the_list->files[i], &disks[i], sizeof(zc_entry_t));
+    }
+}
+
 void init(void) {
     // automatically make the first "entry" selected
     list_left.selected = 1;
     list_right.selected = 1;
+
+    char letters[] = {'A','B','C','H','T'};
+    for(uint8_t i = 0; i < sizeof(letters); i++) {
+        char letter = letters[i];
+        zos_err_t err = is_disk(letter);
+        if(err == ERR_SUCCESS) {
+            zc_entry_t *drive = &disks[disks_len];
+            strcpy(drive->name, "A:/");
+            drive->name[0] = letter;
+            drive->flags = FileFlag_Disk;
+            disks_len++;
+        }
+    }
+
+    // for(uint8_t i = 0; i < disks_len; i++) {
+    //     printf("mounted disk: %s\n", disks[i].name);
+    // }
+
 
     // set curdir as path
     strcpy(list_left.path, ".");
@@ -428,30 +470,36 @@ void init(void) {
 
     // path_left
     err = path_resolve(list_left.path, original_path, path_src);
-    if(err != ERR_SUCCESS) {
+    if(err == ERR_DISK_OFFSET) {
+        file_list_disks(&list_left);
+    } else if(err != ERR_SUCCESS) {
         printf("path_resolve: %d '%s'\n", err, path_src);
         exit(err);
-    }
-    strcpy(list_left.path, path_src);
-    printf("stat left: '%s'\n", list_left.path);
-    err = is_dir(list_left.path);
-    if(err != ERR_SUCCESS) {
-        printf("stat:left: %d '%s'\n", err, list_left.path);
-        exit(err);
+    } else {
+        strcpy(list_left.path, path_src);
+        printf("stat left: '%s'\n", list_left.path);
+        err = is_dir(list_left.path);
+        if(err != ERR_SUCCESS) {
+            printf("stat:left: %d '%s'\n", err, list_left.path);
+            exit(err);
+        }
     }
 
     // path_right
     err = path_resolve(list_right.path, original_path, path_src);
-    if(err != ERR_SUCCESS) {
+    if(err == ERR_DISK_OFFSET) {
+        file_list_disks(&list_left);
+    } else if(err != ERR_SUCCESS) {
         printf("path_resolve: %d '%s'\n", err, path_src);
         exit(err);
-    }
-    strcpy(list_right.path, path_src);
-    printf("stat right: '%s'\n", list_right.path);
-    err = is_dir(list_left.path);
-    if(err != ERR_SUCCESS) {
-        printf("stat:right: '%s'\n", list_right.path);
-        exit(err);
+    } else {
+        strcpy(list_right.path, path_src);
+        printf("stat right: '%s'\n", list_right.path);
+        err = is_dir(list_left.path);
+        if(err != ERR_SUCCESS) {
+            printf("stat:right: '%s'\n", list_right.path);
+            exit(err);
+        }
     }
 
     // exit(0xFF);
@@ -487,6 +535,10 @@ int main(void) {
     while(1) {
         key = getkey();
         handle_keypress(key);
+
+        // TODO: constantly resetting text scroll
+        zvb_peri_text_scroll_y = 0;
+        zvb_peri_text_scroll_x = 0;
     }
 
     // return 0; // unreachable
