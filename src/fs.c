@@ -10,7 +10,7 @@
 zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
     zos_dev_t d = opendir(path);
     if(d < 0) {
-        message("opendir err %s", path);
+        error(-d, "opendir err %s", path);
         return -d;
     }
 
@@ -23,7 +23,7 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
         err = readdir(d, &dir_entry);
         if(err == ERR_NO_MORE_ENTRIES) break;
         if(err != ERR_SUCCESS) {
-            message("readdir err %s", path);
+            error(err, "readdir %s", path);
             return err;
         }
 
@@ -34,7 +34,7 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
             sprintf(filename, "%s%s", path, dir_entry.d_name);
             err = stat(filename, &entry_stat);
             if(err != ERR_SUCCESS) {
-                message("stat err: %s", filename);
+                error(err, "stat %s", filename);
                 return err;
             }
 
@@ -55,7 +55,7 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
 
     err = close(d);
     if(err != ERR_SUCCESS) {
-        message("close err");
+        error(err, "close");
         return err;
     }
     return ERR_SUCCESS;
@@ -105,4 +105,35 @@ zos_err_t rename(const char* src, const char* dst) {
     (void *)src;
     (void *)dst;
     return ERR_FAILURE;
+}
+
+zos_err_t exists(const char* src) {
+    zos_err_t err;
+    zos_dev_t dev;
+    zos_stat_t zos_stat;
+
+    dev = opendir(src);
+    if(dev == -ERR_NOT_A_DIR) {
+        // maybe a file?
+        err = stat(src, &zos_stat);
+        if(err == ERR_NOT_A_FILE || err == ERR_NO_SUCH_ENTRY) {
+            // not a file, must be an invalid path
+            return ERR_INVALID_PATH;
+        }
+        if(err != ERR_SUCCESS) return err;
+    }
+
+    // we had another error
+    if (dev < 0) return -dev;
+
+    // we opened a dir, close it
+    return close(dev);
+}
+
+zos_err_t is_dir(const char* src) {
+    zos_dev_t err;
+
+    err = opendir(src);
+    if(err < 0) return -err;
+    return close(err);
 }

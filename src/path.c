@@ -19,37 +19,35 @@
  * @returns ERR_SUCCESS on success, error code else.
  */
 zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
-    if(strlen(path) < 1) return ERR_INVALID_PARAMETER;
-    if(strlen(root) < 3) return ERR_INVALID_PARAMETER; // must be a drive root
-
     char a, b, c;
+    uint8_t i = 0;
+    uint8_t l = strlen(root);
 
-    // goto the root of root
+    // must have a drive root
+    if(l < 3) return ERR_INVALID_PARAMETER & 0xA0;
+
     a = root[0];
     b = root[1];
     c = root[2];
-    if(b != PATH_DRIVE && b != PATH_SEPARATOR) {
-        // root must contain an X:/ drive
-        return ERR_INVALID_PARAMETER;
+
+    // root must contain an X:/ drive
+    if(b != PATH_DRIVE && c != PATH_SEPARATOR) {
+        return ERR_INVALID_PARAMETER & 0xB0;
     }
 
-    // copy the root to the resolved
+    // root is the current resolved path
     strcpy(resolved, root);
 
-    uint8_t i = 0;
-    uint8_t l = strlen(resolved);
-    if(l == 0) return ERR_INVALID_PARAMETER;
+    l = strlen(resolved);
 
-    // if path starts with root, resolve to X:/
-    if(path[0] == PATH_SEPARATOR) {
-        resolved[3] = NULL_TERM;
-        i = 1;
-        l = 3;
-    }
+    // must have a drive root
+    if(l < 3) return ERR_INVALID_PARAMETER & 0xC0;
+
 
     a = path[0];
     b = path[1];
     c = path[2];
+
     // path has a drive, use it as new root
     if(b == PATH_DRIVE && c == PATH_SEPARATOR) {
         resolved[0] = path[0];
@@ -59,28 +57,28 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         l = 3;
     }
 
+    // if path starts with root, resolve to X:/
+    if(a == PATH_SEPARATOR) {
+        resolved[3] = NULL_TERM;
+        i = 1; // skip the /
+        l = 3; // start at X:/*
+    }
+
     // resolve `..` parent markers
-    do {
+    for(;;) {
         a = path[i];
         if(a == NULL_TERM) break; // reached end of path
         b = path[i+1];
         c = path[i+2];
 
-        // if(b == PATH_DRIVE && c == PATH_SEPARATOR) {
-        //     // new root is the drive
-        //     sprintf(resolved, "%c%c%c", a, b, c);
-        //     i += 3; // move the pointer past the X:/ drive
-        //     continue;
-        // }
-
         // find `..`
         if(a == PATH_DOT && b == PATH_DOT && c == PATH_SEPARATOR) {
             // can't go above the drive root
-            if(l < 3) return ERR_INVALID_PATH;
+            if(l < 4) return ERR_INVALID_PATH & 0xD0;
 
             l--;
             if(resolved[l] == PATH_SEPARATOR) {
-                if(l == 0) return ERR_INVALID_PATH;
+                if(l == 0) return ERR_INVALID_PATH  & 0xE0;
                 l--;
                 resolved[l] = NULL_TERM;
             }
@@ -92,16 +90,20 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
                 }
             }
             i += 2;
+        } else if (a == PATH_DOT && (b == PATH_SEPARATOR || b == NULL_TERM)) {
+            if(b == NULL_TERM) break;
+            // resolve to current, so skip
+            i += 2;
         } else {
             resolved[l] = a;
             l++;
             if(l >= PATH_MAX) {
                 resolved[PATH_MAX - 1] = NULL_TERM; // make it printable
-                return ERR_INVALID_PATH;
+                return ERR_INVALID_PATH  & 0xF0;
             }
             i++;
         }
-    } while(1);
+    }
 
     resolved[l] = NULL_TERM;
 

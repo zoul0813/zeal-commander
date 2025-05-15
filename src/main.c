@@ -79,13 +79,9 @@ const char path_dst[PATH_MAX];
 
 zos_stat_t zos_stat;
 zc_list_t list_left = {
-    .path = "/",
-    .selected = 2,
     .window = &win_ListingLeft,
 };
 zc_list_t list_right = {
-    .path = "/",
-    .selected = 1,
     .window = &win_ListingRight,
 };
 
@@ -142,25 +138,25 @@ void handle_keypress(char key) {
             zc_entry_t *entry_s = entry_get_focus();
             err = path_concat(entry_s->name, list_focus->path, path_src);
             if(err != ERR_SUCCESS) {
-                message("ERROR: path focus %d %s", err, entry_s->name);
+                error(err, " path_concat focus %s", entry_s->name);
                 break;
             }
 
             err = path_concat(entry_s->name, list_blur->path, path_dst);
             if(err != ERR_SUCCESS) {
-                message("ERROR: path blur %d %s", err, entry_s->name);
+                error(err, "path_concat blur %s", entry_s->name);
                 break;
             }
 
             err = copy(path_src, path_dst);
             if(err != ERR_SUCCESS) {
-                message("ERROR: copy %d %s", err, path_src);
+                error(err, "copy %s", path_src);
                 break;
             }
 
             err = list(list_blur->path, list_blur->files, &list_blur->len);
             if(err != ERR_SUCCESS) {
-                message("ERROR: list %d %s", err, path_src);
+                error(err, "list %s", path_src);
                 break;
             }
 
@@ -177,7 +173,7 @@ void handle_keypress(char key) {
             if(err == ERR_SUCCESS) {
                 move(path_src, path_dst);
             } else {
-                message("ERROR: %d %s", err, path_src);
+                error(err, "move %s", path_src);
             }
 
             list(list_focus->path, list_focus->files, &list_focus->len);
@@ -198,7 +194,7 @@ void handle_keypress(char key) {
             if(err == ERR_SUCCESS) {
                 remove(path_src);
             } else {
-                message("ERROR: %d %s", err, path_src);
+                error(err, "remove %s",path_src);
             }
             list(list_focus->path, list_focus->files, &list_focus->len);
             window_clrscr(list_focus->window); // TODO: instead of clearing the whole thing, just clear whats need to be cleaned up... ?
@@ -218,24 +214,23 @@ void handle_keypress(char key) {
             if(list_focus->selected == 0) {
                 err = path_resolve("../", list_focus->path, path_src);
                 if(err != ERR_SUCCESS) {
-                    message("ERROR: resolve UP_DIR %d %s", err, path_src);
+                    error(err, "resolve UP_DIR %s", path_src);
                     break;
                 }
                 strcpy(list_focus->path, path_src);
-                list_focus->selected = 1;
                 file_list_show(list_focus);
                 break;
             }
 
             zc_entry_t *entry = entry_get_focus();
             if((entry->flags & FileFlag_Directory) == 0) {
-                message("ERROR: not a dir");
+                error(ERR_NOT_A_DIR, "entry %s", list_focus->path);
                 break;
             }
 
             err = path_resolve(entry->name, list_focus->path, path_src);
             if(err != ERR_SUCCESS) {
-                message("ERROR: resolve %d %s", err, list_focus->path);
+                error(err, "resolve %s", list_focus->path);
                 break;
             }
 
@@ -310,7 +305,7 @@ void file_list_highlight(zc_list_t *list) {
     zc_entry_t *entry = entry_get_focus();
     err = path_concat(entry->name, list_focus->path, path_src);
     if(err != ERR_SUCCESS) {
-        message("ERROR: concat %d %s", path_src);
+        error(err, "concat %s", path_src);
     } else {
         message("%s", path_src);
     }
@@ -349,7 +344,7 @@ void file_list_select(zc_list_t *list, int8_t index) {
 void file_list_show(zc_list_t *the_list) {
     err = list(the_list->path, the_list->files, &the_list->len);
     if(err != ERR_SUCCESS) {
-        message("ERROR: list UP_DIR %d %s", err, path_src);
+        error(err, "list UP_DIR %s",path_src);
         return;
     }
 
@@ -423,32 +418,43 @@ void file_list_show(zc_list_t *the_list) {
 }
 
 void init(void) {
+    // automatically make the first "entry" selected
+    list_left.selected = 1;
+    list_right.selected = 1;
+
+    // set curdir as path
+    strcpy(list_left.path, ".");
+    strcpy(list_right.path, "../");
 
     // path_left
     err = path_resolve(list_left.path, original_path, path_src);
     if(err != ERR_SUCCESS) {
-        printf("path_resolve: %d\n", err);
+        printf("path_resolve: %d '%s'\n", err, path_src);
         exit(err);
     }
     strcpy(list_left.path, path_src);
-    err = stat(list_left.path, &zos_stat);
+    printf("stat left: '%s'\n", list_left.path);
+    err = is_dir(list_left.path);
     if(err != ERR_SUCCESS) {
-        printf("stat:left: %s\n", list_left.path);
+        printf("stat:left: %d '%s'\n", err, list_left.path);
         exit(err);
     }
 
     // path_right
     err = path_resolve(list_right.path, original_path, path_src);
     if(err != ERR_SUCCESS) {
-        printf("path_resolve: %d\n", err);
+        printf("path_resolve: %d '%s'\n", err, path_src);
         exit(err);
     }
     strcpy(list_right.path, path_src);
-    err = stat(list_left.path, &zos_stat);
+    printf("stat right: '%s'\n", list_right.path);
+    err = is_dir(list_left.path);
     if(err != ERR_SUCCESS) {
-        printf("stat:right: %s\n", list_right.path);
+        printf("stat:right: '%s'\n", list_right.path);
         exit(err);
     }
+
+    // exit(0xFF);
 }
 
 int main(void) {

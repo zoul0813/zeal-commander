@@ -28,5 +28,7 @@ zos_err_t remove(const char* path);
 zos_err_t move(const char* src, const char* dst);
 zos_err_t copy(const char* src, const char* dst);
 zos_err_t rename(const char* src, const char* dst);
+zos_err_t exists(const char* src);
+zos_err_t is_dir(const char* src);
 
 #endif

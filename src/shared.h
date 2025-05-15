@@ -6,9 +6,13 @@
  // video.asm: DEFC DEFAULT_CURSOR_BLINK = 30
 #define DEFAULT_CURSOR_BLINK 30
 
+extern const char *ERROR_STRINGS[ERR_DIR_NOT_EMPTY+1];
+extern const uint8_t ERROR_STRINGS_LEN;
+
 int __exit(zos_err_t err);
 void handle_error(zos_err_t err, char *msg, uint8_t fatal);
 void message(const char* str, ...);
+void error(zos_err_t err, const char* str, ...);
 int str_ends_with(const char *str, const char *suffix);
 
 static inline void cursor_x(unsigned char x) {
