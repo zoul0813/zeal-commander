@@ -3,7 +3,7 @@
 #include "keyboard.h"
 #include "shared.h"
 
-char kb_buffer[16];
+char kb_buffer[32];
 
 zos_err_t kb_mode(void *arg) {
   return ioctl(DEV_STDIN, KB_CMD_SET_MODE, arg);

@@ -93,10 +93,12 @@ zc_list_t *list_blur = &list_right;
 
 void view_switch(View view);
 void toggle_view(View view);
+void draw_screen(void);
 void file_list_show(zc_list_t *list);
 void file_list_highlight(zc_list_t *list);
 void file_list_select(zc_list_t *list, int8_t index);
 void file_list_disks(zc_list_t *list);
+void execute(const char* path);
 
 void view_switch(View view) {
     previous_view = active_view;
@@ -130,6 +132,31 @@ void view_switch(View view) {
     return view_switch(view);
  }
 
+void execute(const char* path) {
+
+    err = ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
+    handle_error(err, "reset_screen", 1);
+
+    err = kb_mode_default();
+    handle_error(err, "reset keyboard", 1);
+
+    uint8_t retval;
+    exec(EXEC_PRESERVE_PROGRAM, path, NULL, &retval);
+
+    if(retval != 0) {
+        printf("\n\nExited with error $%02x\n", retval, retval);
+    }
+    printf("\n\nPress Enter to return to Zeal Commander...\n");
+
+    err = kb_mode_non_block_raw();
+    handle_error(err, "re-init keyboard", 1);
+
+    do {
+        key = getkey();
+    } while(key != KB_KEY_ENTER);
+
+    draw_screen();
+}
 
 void handle_keypress(char key) {
     // [F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F10] Quit
@@ -246,6 +273,11 @@ void handle_keypress(char key) {
             if((entry->flags & FileFlag_Disk) != 0) {
                 // it's a disk
                 strcpy(list_focus->path, entry->name);
+            } else if((entry->flags & FileFlag_Executable) != 0) {
+                // possible executable, execute it?
+                path_resolve(entry->name, list_focus->path, path_src);
+                message("Execute %s\n", path_src);
+                execute(path_src);
             } else if((entry->flags & FileFlag_Directory) == 0) {
                 error(ERR_NOT_A_DIR, "entry %s", list_focus->path);
                 break;
@@ -482,9 +514,7 @@ void init(void) {
     } else {
         strcpy(list_left.path, path_src);
         err = is_dir(list_left.path);
-        if(err != ERR_SUCCESS) {
-            handle_error(err, "not a dir", 1);
-        }
+        handle_error(err, "not a dir", 1);
     }
 
     // path_right
@@ -496,25 +526,17 @@ void init(void) {
     } else {
         strcpy(list_right.path, path_src);
         err = is_dir(list_left.path);
-        if(err != ERR_SUCCESS) {
-            handle_error(err, "not a dir", 1);
-        }
+        handle_error(err, "not a dir", 1);
     }
 }
 
-int main(void) {
-    curdir(original_path); // record the original system path
-
-    init();
-
-    err = kb_mode((void *)(KB_READ_NON_BLOCK | KB_MODE_RAW));
+void draw_screen(void) {
+    err = kb_mode_non_block_raw();
     handle_error(err, "init keyboard", 1);
 
 
     err = ioctl(DEV_STDOUT, CMD_CLEAR_SCREEN, NULL);
-    if(err != ERR_SUCCESS) {
-        handle_error(err, "clear_screen", 1);
-    }
+    handle_error(err, "clear_screen", 1);
 
     SET_CURSOR_BLINK(0);
 
@@ -528,6 +550,14 @@ int main(void) {
 
     file_list_show(&list_left);
     file_list_show(&list_right);
+}
+
+int main(void) {
+    curdir(original_path); // record the original system path
+
+    init();
+
+    draw_screen();
 
     while(1) {
         key = getkey();
