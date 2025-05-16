@@ -50,6 +50,7 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         resolved[0] = path[0];
         resolved[1] = path[1];
         resolved[2] = path[2];
+        resolved[3] = NULL_TERM;
         i = 3;
         l = 3;
     }

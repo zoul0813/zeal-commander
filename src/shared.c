@@ -58,31 +58,55 @@ void handle_error(zos_err_t err, char *msg, uint8_t fatal) {
 void message(const char* str, ...) {
     // TODO: clear previous line
     va_list args;
-    cursor_xy(0, SCREEN_COL80_HEIGHT-2);
-    setcolor(FG_MESSAGE, BG_MESSAGE);
+    uint8_t color = COLOR(FG_MESSAGE, BG_MESSAGE);
 
+    const char line[SCREEN_COL80_WIDTH] = {0};
     va_start(args, str);
-    vprintf(str, args);
+    vsprintf(line, str, args);
     va_end(args);
-    printf("%24s\n", ""); // this is dumb
+
+    text_map_vram();
+    for(uint8_t i = 0; i < SCREEN_COL80_WIDTH; i++) {
+        SCR_TEXT[SCREEN_COL80_HEIGHT-2][i] = line[i];
+        SCR_COLOR[SCREEN_COL80_HEIGHT-2][i] = color;
+    }
+    text_demap_vram();
 }
 
+const char line[SCREEN_COL80_WIDTH] = {0};
 void error(zos_err_t err, const char* str, ...) {
     // TODO: clear previous line
     va_list args;
-    cursor_xy(0, SCREEN_COL80_HEIGHT-2);
-    setcolor(FG_ERROR, BG_MESSAGE);
+    // cursor_xy(0, SCREEN_COL80_HEIGHT-2);
+    uint8_t color = COLOR(FG_ERROR, BG_MESSAGE);
+    uint8_t i = 0;
+    memset(line, 0, SCREEN_COL80_WIDTH);
 
     if(err < ERROR_STRINGS_LEN) {
-        printf("ERROR: %s ", ERROR_STRINGS[err]);
+        sprintf(line, "ERROR: %s ", ERROR_STRINGS[err]);
     } else {
-        printf("ERROR: %02x ", err);
+        sprintf(line, "ERROR: %02x ", err);
     }
+    uint8_t l = strlen(line);
+
+    text_map_vram();
+    for(i = 0; i < l; i++) {
+        SCR_TEXT[SCREEN_COL80_HEIGHT-2][i] = line[i];
+        SCR_COLOR[SCREEN_COL80_HEIGHT-2][i] = color;
+    }
+    text_demap_vram();
 
     va_start(args, str);
-    vprintf(str, args);
+    vsprintf(&line[l], str, args);
     va_end(args);
-    printf("%24s\n"); // this is dumb
+
+    color = COLOR(FG_MESSAGE, BG_MESSAGE);
+    text_map_vram();
+    for(; i < SCREEN_COL80_WIDTH; i++) {
+        SCR_TEXT[SCREEN_COL80_HEIGHT-2][i] = line[i];
+        SCR_COLOR[SCREEN_COL80_HEIGHT-2][i] = color;
+    }
+    text_demap_vram();
 }
 
 int str_ends_with(const char *str, const char *suffix) {

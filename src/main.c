@@ -140,6 +140,7 @@ void handle_keypress(char key) {
         } break;
         // copy
         case KB_F2: {
+            message("Copying...");
             zc_entry_t *entry_s = entry_get_focus();
             err = path_concat(entry_s->name, list_focus->path, path_src);
             if(err != ERR_SUCCESS) {
@@ -167,9 +168,11 @@ void handle_keypress(char key) {
 
             window_clrscr(list_blur->window);
             file_list_show(list_blur);
+            message("Copying... DONE");
         } break;
         // move
         case KB_F3: {
+            message("Moving...");
             zc_entry_t *entry_s = entry_get_focus();
             err = path_concat(entry_s->name, list_focus->path, path_src);
 
@@ -188,12 +191,16 @@ void handle_keypress(char key) {
             list(list_blur->path, list_blur->files, &list_blur->len);
             window_clrscr(list_blur->window);
             file_list_show(list_blur);
+            message("Moving... DONE");
         } break;
         // rename
         case KB_F4: {
+            message("Renaming...");
+            message("Renaming... DONE");
         } break;
         // delete
         case KB_F5: {
+            message("Deleting...");
             zc_entry_t *entry = entry_get_focus();
             err = path_concat(entry->name, list_focus->path, path_src);
             if(err == ERR_SUCCESS) {
@@ -204,11 +211,14 @@ void handle_keypress(char key) {
             list(list_focus->path, list_focus->files, &list_focus->len);
             window_clrscr(list_focus->window); // TODO: instead of clearing the whole thing, just clear whats need to be cleaned up... ?
             file_list_show(list_focus);
+            message("Deleting... DONE");
         } break;
 
         // refresh
         case KB_F9: {
+            message("Refreshing...");
             file_list_show(list_focus);
+            message("Refreshing... DONE");
         } break;
         // quit
         case KB_F10: __exit(ERR_SUCCESS); break;
@@ -459,11 +469,6 @@ void init(void) {
         }
     }
 
-    // for(uint8_t i = 0; i < disks_len; i++) {
-    //     printf("mounted disk: %s\n", disks[i].name);
-    // }
-
-
     // set curdir as path
     strcpy(list_left.path, ".");
     strcpy(list_right.path, "../");
@@ -473,36 +478,28 @@ void init(void) {
     if(err == ERR_DISK_OFFSET) {
         file_list_disks(&list_left);
     } else if(err != ERR_SUCCESS) {
-        printf("path_resolve: %d '%s'\n", err, path_src);
         exit(err);
     } else {
         strcpy(list_left.path, path_src);
-        printf("stat left: '%s'\n", list_left.path);
         err = is_dir(list_left.path);
         if(err != ERR_SUCCESS) {
-            printf("stat:left: %d '%s'\n", err, list_left.path);
-            exit(err);
+            handle_error(err, "not a dir", 1);
         }
     }
 
     // path_right
     err = path_resolve(list_right.path, original_path, path_src);
     if(err == ERR_DISK_OFFSET) {
-        file_list_disks(&list_left);
+        file_list_disks(&list_right);
     } else if(err != ERR_SUCCESS) {
-        printf("path_resolve: %d '%s'\n", err, path_src);
         exit(err);
     } else {
         strcpy(list_right.path, path_src);
-        printf("stat right: '%s'\n", list_right.path);
         err = is_dir(list_left.path);
         if(err != ERR_SUCCESS) {
-            printf("stat:right: '%s'\n", list_right.path);
-            exit(err);
+            handle_error(err, "not a dir", 1);
         }
     }
-
-    // exit(0xFF);
 }
 
 int main(void) {
@@ -536,9 +533,9 @@ int main(void) {
         key = getkey();
         handle_keypress(key);
 
-        // TODO: constantly resetting text scroll
-        zvb_peri_text_scroll_y = 0;
-        zvb_peri_text_scroll_x = 0;
+        // // TODO: constantly resetting text scroll
+        // zvb_peri_text_scroll_y = 0;
+        // zvb_peri_text_scroll_x = 0;
     }
 
     // return 0; // unreachable
