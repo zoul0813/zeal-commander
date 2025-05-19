@@ -159,11 +159,16 @@ void execute(const char* path) {
 }
 
 void handle_keypress(char key) {
-    // " [F1] Help [F5] Copy [F6] Move [F7] Rename [F8] Delete [F9] Refresh [F10] Quit";
+    // " [1] Help [4] Rename [5] Copy [6] Move [7] Mkdir [8] Delete [9] Refresh [10] Quit";
     switch(key) {
         // help
         case KB_F1: {
             toggle_view(VIEW_HELP);
+        } break;
+        // rename
+        case KB_F4: {
+            message("Renaming...");
+            message("Renaming... DONE");
         } break;
         // copy
         case KB_F5: {
@@ -220,11 +225,6 @@ void handle_keypress(char key) {
             file_list_show(list_blur);
             message("Moving... DONE");
         } break;
-        // rename
-        case KB_F7: {
-            message("Renaming...");
-            message("Renaming... DONE");
-        } break;
         // delete
         case KB_F8: {
             message("Deleting...");
@@ -240,7 +240,19 @@ void handle_keypress(char key) {
             file_list_show(list_focus);
             message("Deleting... DONE");
         } break;
-
+        // mkdir
+        case KB_F7: {
+            // message("mkdir: ");
+            char buffer[FILENAME_LEN_MAX] = {0};
+            uint16_t l = input("mkdir: ", buffer, FILENAME_LEN_MAX);
+            if(l > 0) {
+                buffer[l-1] = 0;
+            }
+            path_resolve(buffer, list_focus->path, path_dst);
+            mkdir(path_dst);
+            file_list_show(list_focus);
+            message("mkdir: %s ... DONE!", buffer);
+        } break;
         // refresh
         case KB_F9: {
             message("Refreshing...");
@@ -249,6 +261,9 @@ void handle_keypress(char key) {
         } break;
         // quit
         case KB_F10: __exit(ERR_SUCCESS); break;
+
+        // view
+        case KB_F3: // fall-thru for now into "action"
 
         // action
         case KB_KEY_ENTER: // fall-thru
@@ -544,7 +559,7 @@ void draw_screen(void) {
     setcolor(FG_MENU, BG_MENU); // inverted
     text_menu(0, 0, menu_main);
 
-    const char *menu_file = " [F1] Help [F5] Copy [F6] Move [F7] Rename [F8] Delete [F9] Refresh [F10] Quit";
+    const char *menu_file = "[1] Help [4] Ren [5] Copy [6] Move [7] Mkdir [8] Del [9] Update [10] Quit";
     setcolor(TEXT_COLOR_DARK_GRAY, FG_MENU); // inverted
     text_menu(0, SCREEN_COL80_HEIGHT-1, menu_file);
 

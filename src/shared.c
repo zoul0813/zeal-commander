@@ -7,6 +7,7 @@
 #include <zos_video.h>
 
 #include "shared.h"
+#include "keyboard.h"
 #include "windows.h"
 
 const char *ERROR_STRINGS[] = {
@@ -71,6 +72,28 @@ void message(const char* str, ...) {
         SCR_COLOR[SCREEN_COL80_HEIGHT-2][i] = color;
     }
     text_demap_vram();
+}
+
+uint16_t input(const char* prefix, const char* buffer, uint16_t len) {
+    message(prefix);
+    cursor_xy(8, SCREEN_COL80_HEIGHT-2);
+    setcolor(FG_MESSAGE, BG_MESSAGE);
+    cursor(1);
+    zos_err_t err = kb_mode_default();
+    if(err != ERR_SUCCESS) {
+        error(err, "kb_mode_default");
+        return 0;
+    }
+    uint16_t size = len;
+    err = read(DEV_STDIN, buffer, &size);
+    if(err != ERR_SUCCESS) {
+        error(err, "read stdin");
+        return 0;
+    }
+    cursor(0);
+    kb_mode_non_block_raw();
+
+    return size;
 }
 
 const char line[SCREEN_COL80_WIDTH] = {0};
