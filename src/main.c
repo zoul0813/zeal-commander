@@ -159,14 +159,14 @@ void execute(const char* path) {
 }
 
 void handle_keypress(char key) {
-    // [F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F10] Quit
+    // " [F1] Help [F5] Copy [F6] Move [F7] Rename [F8] Delete [F9] Refresh [F10] Quit";
     switch(key) {
         // help
         case KB_F1: {
             toggle_view(VIEW_HELP);
         } break;
         // copy
-        case KB_F2: {
+        case KB_F5: {
             message("Copying...");
             zc_entry_t *entry_s = entry_get_focus();
             err = path_concat(entry_s->name, list_focus->path, path_src);
@@ -198,7 +198,7 @@ void handle_keypress(char key) {
             message("Copying... DONE");
         } break;
         // move
-        case KB_F3: {
+        case KB_F6: {
             message("Moving...");
             zc_entry_t *entry_s = entry_get_focus();
             err = path_concat(entry_s->name, list_focus->path, path_src);
@@ -221,12 +221,12 @@ void handle_keypress(char key) {
             message("Moving... DONE");
         } break;
         // rename
-        case KB_F4: {
+        case KB_F7: {
             message("Renaming...");
             message("Renaming... DONE");
         } break;
         // delete
-        case KB_F5: {
+        case KB_F8: {
             message("Deleting...");
             zc_entry_t *entry = entry_get_focus();
             err = path_concat(entry->name, list_focus->path, path_src);
@@ -544,7 +544,7 @@ void draw_screen(void) {
     setcolor(FG_MENU, BG_MENU); // inverted
     text_menu(0, 0, menu_main);
 
-    const char *menu_file = " [F1] Help [F2] Copy [F3] Move [F4] Rename [F5] Delete [F9] Refresh [F10] Quit";
+    const char *menu_file = " [F1] Help [F5] Copy [F6] Move [F7] Rename [F8] Delete [F9] Refresh [F10] Quit";
     setcolor(TEXT_COLOR_DARK_GRAY, FG_MENU); // inverted
     text_menu(0, SCREEN_COL80_HEIGHT-1, menu_file);
 

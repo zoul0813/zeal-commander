@@ -26,5 +26,8 @@ all::
 	cp -R $(OUTPUT_DIR)/test1 $(OUTPUT_DIR)/test2/beta
 	cp $(OUTPUT_DIR)/zc.bin $(OUTPUT_DIR)/test2/test.bin
 
-native: all
+run:
 	$(EMU_NATIVE_BIN) -H bin -r $(EMU_NATIVE_ROM) -t tf.img -e eeprom.img
+
+native: all run
+
