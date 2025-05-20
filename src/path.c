@@ -111,7 +111,7 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
     if(resolved[l-1] != PATH_SEPARATOR) {
         zos_dev_t err = opendir(resolved);
         if(err >= 0) close(err); // if we opened a dir, close it
-        if(err == -ERR_NOT_A_DIR) {
+        if(err == -ERR_NOT_A_DIR || err == -ERR_NO_SUCH_ENTRY) {
             return ERR_SUCCESS;
         }
         resolved[l++] = PATH_SEPARATOR;

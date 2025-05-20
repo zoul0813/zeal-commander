@@ -11,6 +11,8 @@
 #include "path.h"
 #include "fs.h"
 
+#include "view_help.h"
+
 #define entry_get_focus() &list_focus->files[list_focus->selected - 1]
 #define entry_get_blur() &list_focus->files[list_focus->selected - 1]
 
@@ -36,17 +38,6 @@ typedef struct {
 
 View active_view = VIEW_NONE;
 View previous_view = VIEW_NONE;
-
-window_t win_Help = {
-  .x = SCREEN_COL80_WIDTH / 4,
-  .y = SCREEN_COL80_HEIGHT / 4,
-  .w = SCREEN_COL80_WIDTH / 2,
-  .h = SCREEN_COL80_HEIGHT / 2,
-  .flags = WIN_BORDER | WIN_SHADOW,
-  .fg = FG_SECONDARY,
-  .bg = BG_SECONDARY,
-  .title = "Help"
-};
 
 window_t win_ListingLeft = {
     .x = 0,
@@ -106,20 +97,10 @@ void view_switch(View view) {
     switch(view) {
         case VIEW_NONE: {
             // TODO: refresh the main display
+            draw_screen();
         } break;
         case VIEW_HELP: {
-            // move this into a view!
-            window(&win_Help);
-            window_clrscr(&win_Help);
-            window_puts(&win_Help, "Help Text\n");
-            window_puts(&win_Help, "Line 2\n");
-            window_puts(&win_Help, "Line 3\n");
-            window_puts(&win_Help, "Line 4\n");
-            window_puts(&win_Help, "Line 5\n");
-            window_puts(&win_Help, "Line 6\twith\ttabs\n");
-            window_puts(&win_Help, "Line 7a\twi\ttabs\n");
-            // window_gotoxy(&win_Help, 0, 3);
-            // window_clreol(&win_Help);
+            view_draw_help();
         } break;
     }
     active_view = view;
@@ -167,8 +148,13 @@ void handle_keypress(char key) {
         } break;
         // rename
         case KB_F4: {
-            message("Renaming...");
-            message("Renaming... DONE");
+            zc_entry_t *entry = entry_get_focus();
+            path_resolve(entry->name, list_focus->path, path_src);
+            path_resolve(entry->name, list_focus->path, path_dst);
+            uint16_t l = input("rename: ", path_dst, PATH_MAX);
+            move(path_src, path_dst);
+            file_list_show(list_focus);
+            message("rename: %s ... DONE!", path_dst);
         } break;
         // copy
         case KB_F5: {
@@ -242,12 +228,8 @@ void handle_keypress(char key) {
         } break;
         // mkdir
         case KB_F7: {
-            // message("mkdir: ");
             char buffer[FILENAME_LEN_MAX] = {0};
             uint16_t l = input("mkdir: ", buffer, FILENAME_LEN_MAX);
-            if(l > 0) {
-                buffer[l-1] = 0;
-            }
             path_resolve(buffer, list_focus->path, path_dst);
             mkdir(path_dst);
             file_list_show(list_focus);

@@ -74,7 +74,7 @@ void message(const char* str, ...) {
     text_demap_vram();
 }
 
-uint16_t input(const char* prefix, const char* buffer, uint16_t len) {
+uint16_t input(const char* prefix, char* buffer, uint16_t len) {
     message(prefix);
     cursor_xy(8, SCREEN_COL80_HEIGHT-2);
     setcolor(FG_MESSAGE, BG_MESSAGE);
@@ -84,11 +84,21 @@ uint16_t input(const char* prefix, const char* buffer, uint16_t len) {
         error(err, "kb_mode_default");
         return 0;
     }
-    uint16_t size = len;
+    uint16_t size = strlen(buffer);
+    err = write(DEV_STDIN, buffer, &size);
+    if(err != ERR_SUCCESS) {
+        error(err, "write stdin");
+        return 0;
+    }
+    size = len;
     err = read(DEV_STDIN, buffer, &size);
     if(err != ERR_SUCCESS) {
         error(err, "read stdin");
         return 0;
+    }
+    size = strlen(buffer) - 1; // -1 to strip the trailing \n
+    if(size > 0) {
+        buffer[size] = 0;
     }
     cursor(0);
     kb_mode_non_block_raw();
