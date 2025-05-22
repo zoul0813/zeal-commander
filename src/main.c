@@ -64,20 +64,16 @@ window_t win_ListingRight = {
 };
 
 
-const char original_path[PATH_MAX];
-const char path_src[PATH_MAX];
-const char path_dst[PATH_MAX];
+char original_path[PATH_MAX];
+char path_src[PATH_MAX];
+char path_dst[PATH_MAX];
 
-zc_entry_t disks[6] = { { 0 } };
+zc_entry_t disks[6];
 uint8_t disks_len = 0;
 
 zos_stat_t zos_stat;
-zc_list_t list_left = {
-    .window = &win_ListingLeft,
-};
-zc_list_t list_right = {
-    .window = &win_ListingRight,
-};
+zc_list_t list_left;
+zc_list_t list_right;
 
 zc_list_t *list_focus = &list_left;
 zc_list_t *list_blur = &list_right;
@@ -228,7 +224,7 @@ void handle_keypress(char key) {
         } break;
         // mkdir
         case KB_F7: {
-            char buffer[FILENAME_LEN_MAX] = {0};
+            char buffer[FILENAME_LEN_MAX];
             uint16_t l = input("mkdir: ", buffer, FILENAME_LEN_MAX);
             path_resolve(buffer, list_focus->path, path_dst);
             mkdir(path_dst);
@@ -481,6 +477,14 @@ void file_list_disks(zc_list_t *the_list) {
 }
 
 void init(void) {
+    memset(&list_left, 0, sizeof(zc_list_t));
+    list_left.window = &win_ListingLeft;
+
+    memset(&list_right, 0, sizeof(zc_list_t));
+    list_right.window = &win_ListingRight;
+
+    memset(disks, 0, sizeof(zc_entry_t) * 6);
+
     // automatically make the first "entry" selected
     list_left.selected = 1;
     list_right.selected = 1;

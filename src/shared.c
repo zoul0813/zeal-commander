@@ -41,6 +41,7 @@ const char *ERROR_STRINGS[] = {
 };
 const uint8_t ERROR_STRINGS_LEN = sizeof(ERROR_STRINGS) / sizeof(ERROR_STRINGS[0]);
 
+char line[SCREEN_COL80_WIDTH];
 
 int __exit(zos_err_t err) {
   if(err == ERR_SUCCESS) err = ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
@@ -61,7 +62,8 @@ void message(const char* str, ...) {
     va_list args;
     uint8_t color = COLOR(FG_MESSAGE, BG_MESSAGE);
 
-    const char line[SCREEN_COL80_WIDTH] = {0};
+    memset(line, 0, SCREEN_COL80_WIDTH);
+
     va_start(args, str);
     vsprintf(line, str, args);
     va_end(args);
@@ -106,7 +108,6 @@ uint16_t input(const char* prefix, char* buffer, uint16_t len) {
     return size;
 }
 
-const char line[SCREEN_COL80_WIDTH] = {0};
 void error(zos_err_t err, const char* str, ...) {
     // TODO: clear previous line
     va_list args;
