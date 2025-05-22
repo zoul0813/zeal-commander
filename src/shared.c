@@ -87,10 +87,12 @@ uint16_t input(const char* prefix, char* buffer, uint16_t len) {
         return 0;
     }
     uint16_t size = strlen(buffer);
-    err = write(DEV_STDIN, buffer, &size);
-    if(err != ERR_SUCCESS) {
-        error(err, "write stdin");
-        return 0;
+    if(size > 0) {
+        err = write(DEV_STDIN, buffer, &size);
+        if(err != ERR_SUCCESS) {
+            error(err, "write stdin");
+            return 0;
+        }
     }
     size = len;
     err = read(DEV_STDIN, buffer, &size);

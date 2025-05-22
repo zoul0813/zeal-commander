@@ -225,6 +225,7 @@ void handle_keypress(char key) {
         // mkdir
         case KB_F7: {
             char buffer[FILENAME_LEN_MAX];
+            buffer[0] = 0;
             uint16_t l = input("mkdir: ", buffer, FILENAME_LEN_MAX);
             path_resolve(buffer, list_focus->path, path_dst);
             mkdir(path_dst);
