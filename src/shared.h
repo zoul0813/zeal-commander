@@ -12,7 +12,7 @@ extern const uint8_t ERROR_STRINGS_LEN;
 int __exit(zos_err_t err);
 void handle_error(zos_err_t err, char *msg, uint8_t fatal);
 void message(const char* str, ...);
-uint16_t input(const char* prefix, const char* buffer, uint16_t len);
+uint16_t input(const char* prefix, char* buffer, uint16_t len);
 void error(zos_err_t err, const char* str, ...);
 int str_ends_with(const char *str, const char *suffix);
 
