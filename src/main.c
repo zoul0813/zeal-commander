@@ -145,10 +145,22 @@ void handle_keypress(char key) {
         // rename
         case KB_F4: {
             zc_entry_t *entry = entry_get_focus();
-            path_resolve(entry->name, list_focus->path, path_src);
-            path_resolve(entry->name, list_focus->path, path_dst);
+            err = path_resolve(entry->name, list_focus->path, path_src);
+            if(err != ERR_SUCCESS) {
+                error(err, "path_resolve path_src %s", path_src);
+                break;
+            }
+            err = path_resolve(entry->name, list_focus->path, path_dst);
+            if(err != ERR_SUCCESS) {
+                error(err, "path_resolve path_dst %s", path_src);
+                break;
+            }
             uint16_t l = input("rename: ", path_dst, PATH_MAX);
-            move(path_src, path_dst);
+            err = move(path_src, path_dst);
+            if(err != ERR_SUCCESS) {
+                error(err, "copy %s", path_src);
+                break;
+            }
             file_list_show(list_focus);
             message("rename: %s ... DONE!", path_dst);
         } break;
@@ -189,20 +201,35 @@ void handle_keypress(char key) {
             message("Moving...");
             zc_entry_t *entry_s = entry_get_focus();
             err = path_concat(entry_s->name, list_focus->path, path_src);
-
+            if(err != ERR_SUCCESS) {
+                error(err, "path_concat path_src %s", path_src);
+                break;
+            }
             err = path_concat(entry_s->name, list_blur->path, path_dst);
-
-            if(err == ERR_SUCCESS) {
-                move(path_src, path_dst);
-            } else {
-                error(err, "move %s", path_src);
+            if(err != ERR_SUCCESS) {
+                error(err, "path_concat path_src %s", path_src);
+                break;
             }
 
-            list(list_focus->path, list_focus->files, &list_focus->len);
+            err = move(path_src, path_dst);
+            if(err != ERR_SUCCESS) {
+                error(err, "move %s", path_src);
+                break;
+            }
+
+            err = list(list_focus->path, list_focus->files, &list_focus->len);
+            if(err != ERR_SUCCESS) {
+                error(err, "list %s", path_src);
+                break;
+            }
             window_clrscr(list_focus->window);
             file_list_show(list_focus);
 
-            list(list_blur->path, list_blur->files, &list_blur->len);
+            err = list(list_blur->path, list_blur->files, &list_blur->len);
+            if(err != ERR_SUCCESS) {
+                error(err, "list %s", path_src);
+                break;
+            }
             window_clrscr(list_blur->window);
             file_list_show(list_blur);
             message("Moving... DONE");
@@ -212,12 +239,23 @@ void handle_keypress(char key) {
             message("Deleting...");
             zc_entry_t *entry = entry_get_focus();
             err = path_concat(entry->name, list_focus->path, path_src);
-            if(err == ERR_SUCCESS) {
-                remove(path_src);
-            } else {
-                error(err, "remove %s",path_src);
+            if(err != ERR_SUCCESS) {
+                error(err, "path_concat %s", path_src);
+                break;
             }
-            list(list_focus->path, list_focus->files, &list_focus->len);
+
+            err = remove(path_src);
+            if(err != ERR_SUCCESS) {
+                error(err, "remove %s", path_src);
+                break;
+            }
+
+            err = list(list_focus->path, list_focus->files, &list_focus->len);
+            if(err != ERR_SUCCESS) {
+                error(err, "list %s", path_src);
+                break;
+            }
+
             window_clrscr(list_focus->window); // TODO: instead of clearing the whole thing, just clear whats need to be cleaned up... ?
             file_list_show(list_focus);
             message("Deleting... DONE");
@@ -227,10 +265,19 @@ void handle_keypress(char key) {
             char buffer[FILENAME_LEN_MAX];
             buffer[0] = 0;
             uint16_t l = input("mkdir: ", buffer, FILENAME_LEN_MAX);
-            path_resolve(buffer, list_focus->path, path_dst);
-            mkdir(path_dst);
+            err = path_resolve(buffer, list_focus->path, path_dst);
+            if(err != ERR_SUCCESS) {
+                error(err, "path_resolve %s", path_src);
+                break;
+            }
+
+            err = mkdir(path_dst);
+            if(err != ERR_SUCCESS) {
+                error(err, "copy %s", path_src);
+                break;
+            }
             file_list_show(list_focus);
-            message("mkdir: %s ... DONE!", buffer);
+            message("mkdir: %s ... DONE! %d", buffer, l);
         } break;
         // refresh
         case KB_F9: {

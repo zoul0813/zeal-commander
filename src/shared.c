@@ -87,12 +87,10 @@ uint16_t input(const char* prefix, char* buffer, uint16_t len) {
         return 0;
     }
     uint16_t size = strlen(buffer);
-    if(size > 0) {
-        err = write(DEV_STDIN, buffer, &size);
-        if(err != ERR_SUCCESS) {
-            error(err, "write stdin");
-            return 0;
-        }
+    err = write(DEV_STDIN, buffer, &size);
+    if(err != ERR_SUCCESS) {
+        error(err, "write stdin");
+        return 0;
     }
     size = len;
     err = read(DEV_STDIN, buffer, &size);
@@ -100,10 +98,12 @@ uint16_t input(const char* prefix, char* buffer, uint16_t len) {
         error(err, "read stdin");
         return 0;
     }
-    size = strlen(buffer) - 1; // -1 to strip the trailing \n
-    if(size > 0) {
-        buffer[size] = 0;
-    }
+
+    char *p = buffer;
+    while((*p != '\n') && (*p != 0)) p++;
+    size = p - buffer;
+    buffer[size] = 0;
+
     cursor(0);
     kb_mode_non_block_raw();
 
