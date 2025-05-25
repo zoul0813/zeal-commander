@@ -89,7 +89,7 @@ void execute(const char* path);
 
 void view_switch(View view) {
     previous_view = active_view;
-    cursor(0);
+    SET_CURSOR_BLINK(0);
     switch(view) {
         case VIEW_NONE: {
             // TODO: refresh the main display
@@ -508,7 +508,7 @@ void file_list_show(zc_list_t *the_list) {
         window_puts_color(w, str, color);
     }
 
-    setcolor(FG_PRIMARY, BG_PRIMARY);
+    SET_COLORS(FG_PRIMARY, BG_PRIMARY);
 
 
     if(the_list->selected > the_list->len) the_list->selected = the_list->len;
@@ -590,11 +590,11 @@ void draw_screen(void) {
     SET_CURSOR_BLINK(0);
 
     const char *menu_main = " File Options";
-    setcolor(FG_MENU, BG_MENU); // inverted
+    SET_COLORS(FG_MENU, BG_MENU); // inverted
     text_menu(0, 0, menu_main);
 
     const char *menu_file = "[1] Help [4] Ren [5] Copy [6] Move [7] Mkdir [8] Del [9] Update [10] Quit";
-    setcolor(TEXT_COLOR_DARK_GRAY, FG_MENU); // inverted
+    SET_COLORS(TEXT_COLOR_DARK_GRAY, FG_MENU); // inverted
     text_menu(0, SCREEN_COL80_HEIGHT-1, menu_file);
 
     file_list_show(&list_left);

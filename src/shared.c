@@ -78,9 +78,9 @@ void message(const char* str, ...) {
 
 uint16_t input(const char* prefix, char* buffer, uint16_t len) {
     message(prefix);
-    cursor_xy(8, SCREEN_COL80_HEIGHT-2);
-    setcolor(FG_MESSAGE, BG_MESSAGE);
-    cursor(1);
+    SET_XY(8, SCREEN_COL80_HEIGHT-2);
+    SET_COLORS(FG_MESSAGE, BG_MESSAGE);
+    SET_CURSOR_BLINK(DEFAULT_CURSOR_BLINK);
     zos_err_t err = kb_mode_default();
     if(err != ERR_SUCCESS) {
         error(err, "kb_mode_default");
@@ -104,7 +104,7 @@ uint16_t input(const char* prefix, char* buffer, uint16_t len) {
     size = p - buffer;
     buffer[size] = 0;
 
-    cursor(0);
+    SET_CURSOR_BLINK(0);
     kb_mode_non_block_raw();
 
     return size;
@@ -155,3 +155,17 @@ int str_ends_with(const char *str, const char *suffix) {
 
     return strcmp(str + str_len - suffix_len, suffix) == 0;
 }
+
+int16_t str_pos(const char* str, char c) {
+    if (!str) return -1;
+    const char* start = str;
+    while (*str) {
+        if (*str == c) {
+            return (int16_t)(str - start);
+        }
+        ++str;
+    }
+    return -1;
+}
+
+

@@ -42,7 +42,7 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
             entry->size = entry_stat.s_size;
             memcpy(&entry->date, &entry_stat.s_date, sizeof(zos_date_t));
 
-            if(str_ends_with(entry->name, ".bin")) {
+            if(str_ends_with(entry->name, ".bin") || str_pos(entry->name, '.') < 0) {
                 entry->flags |= FileFlag_Executable;
             }
         } else {

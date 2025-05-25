@@ -41,6 +41,8 @@
 #ifndef VIDEO_MODE
 #define VIDEO_MODE VIDEO_MODE_HIGH
 #endif
+ // video.asm: DEFC DEFAULT_CURSOR_BLINK = 30
+#define DEFAULT_CURSOR_BLINK 30
 
 #ifndef CH_NEWLINE
 #define CH_NEWLINE      0x0A // New line
