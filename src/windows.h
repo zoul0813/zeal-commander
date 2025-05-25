@@ -105,13 +105,19 @@
 #define SET_X(x)                zvb_peri_text_curs_x = x
 #define SET_Y(y)                zvb_peri_text_curs_y = y
 #define SET_XY(x,y)             SET_X(x); SET_Y(y);
-#define PRINT_CHAR(c)           zvb_peri_text_print_char = c
+// #define PRINT_CHAR(c)           zvb_peri_text_print_char = c
 
 extern uint8_t mmu_page_current;
 const __sfr __banked __at(0xF0) mmu_page0_ro;
 __sfr __at(0xF0) mmu_page0;
 uint8_t __at(0x0000) SCR_TEXT[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
 uint8_t __at(0x1000) SCR_COLOR[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
+
+extern uint8_t MIRROR_TEXT[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
+extern uint8_t MIRROR_COLOR[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
+
+#define TEXT_WRITE(w,x,y,c) SCR_TEXT[y][x] = c; if((w->flags & WIN_DIALOG) == 0) { MIRROR_TEXT[y][x] = c; }
+#define COLOR_WRITE(w,x,y,c) SCR_COLOR[y][x] = c; if((w->flags & WIN_DIALOG) == 0) { MIRROR_COLOR[y][x] = c; }
 
 inline void text_map_vram(void);
 inline void text_demap_vram(void);
@@ -122,6 +128,7 @@ typedef enum {
   WIN_SHADOW        = 1 << 1,
   WIN_TITLE_LEFT    = 1 << 2,
   WIN_TITLE_RIGHT   = 1 << 3,
+  WIN_DIALOG        = 1 << 4, // do not write to screen mirror
 } WindowFlags;
 
 typedef struct {
@@ -144,6 +151,9 @@ typedef struct {
   _window_attrs_t _attrs;
 } window_t;
 
+extern window_t win_None;
+extern window_t* win_NonePtr;
+
 void window(window_t* w);
 void window_columns(window_t* w, uint8_t *columns, uint8_t count);
 void window_active(window_t* w, uint8_t active);
@@ -152,6 +162,7 @@ void window_gotoy(window_t* w, uint8_t y);
 void window_gotoxy(window_t* w, uint8_t x, uint8_t y);
 void window_clrscr(window_t* w);
 void window_clreol(window_t* w);
+void window_refresh(void);
 
 uint8_t window_putc(window_t* w, char c);
 uint8_t window_putc_color(window_t* w, char c, uint8_t color);
@@ -161,9 +172,9 @@ uint8_t window_wherex(window_t* w);
 uint8_t window_wherey(window_t* w);
 
 /* Where does this belong? */
-void text_banner(uint8_t x, uint8_t y, uint8_t centered, const char* s);
-void text_header(uint8_t x, uint8_t y, const char* s);
-void text_menu(uint8_t x, uint8_t y, const char* items);
+void text_banner(uint8_t x, uint8_t y, uint8_t c, uint8_t centered, const char* s);
+void text_header(uint8_t x, uint8_t y, uint8_t c, const char* s);
+void text_menu(uint8_t x, uint8_t y, uint8_t c, const char* items);
 
 
 void window_banner(window_t* w, uint8_t x, uint8_t y, uint8_t centered, const char* s);

@@ -70,15 +70,15 @@ void message(const char* str, ...) {
 
     text_map_vram();
     for(uint8_t i = 0; i < SCREEN_COL80_WIDTH; i++) {
-        SCR_TEXT[SCREEN_COL80_HEIGHT-2][i] = line[i];
-        SCR_COLOR[SCREEN_COL80_HEIGHT-2][i] = color;
+        TEXT_WRITE(win_NonePtr, i, MESSAGE_Y, line[i]);
+        COLOR_WRITE(win_NonePtr, i, MESSAGE_Y, color);
     }
     text_demap_vram();
 }
 
 uint16_t input(const char* prefix, char* buffer, uint16_t len) {
     message(prefix);
-    SET_XY(8, SCREEN_COL80_HEIGHT-2);
+    SET_XY(8, MESSAGE_Y);
     SET_COLORS(FG_MESSAGE, BG_MESSAGE);
     SET_CURSOR_BLINK(DEFAULT_CURSOR_BLINK);
     zos_err_t err = kb_mode_default();
@@ -113,7 +113,7 @@ uint16_t input(const char* prefix, char* buffer, uint16_t len) {
 void error(zos_err_t err, const char* str, ...) {
     // TODO: clear previous line
     va_list args;
-    // cursor_xy(0, SCREEN_COL80_HEIGHT-2);
+    // cursor_xy(0, MESSAGE_Y);
     uint8_t color = COLOR(FG_ERROR, BG_MESSAGE);
     uint8_t i = 0;
     memset(line, 0, SCREEN_COL80_WIDTH);
@@ -127,8 +127,8 @@ void error(zos_err_t err, const char* str, ...) {
 
     text_map_vram();
     for(i = 0; i < l; i++) {
-        SCR_TEXT[SCREEN_COL80_HEIGHT-2][i] = line[i];
-        SCR_COLOR[SCREEN_COL80_HEIGHT-2][i] = color;
+        TEXT_WRITE(win_NonePtr, i, MESSAGE_Y, line[i]);
+        COLOR_WRITE(win_NonePtr, i, MESSAGE_Y, color);
     }
     text_demap_vram();
 
@@ -139,8 +139,8 @@ void error(zos_err_t err, const char* str, ...) {
     color = COLOR(FG_MESSAGE, BG_MESSAGE);
     text_map_vram();
     for(; i < SCREEN_COL80_WIDTH; i++) {
-        SCR_TEXT[SCREEN_COL80_HEIGHT-2][i] = line[i];
-        SCR_COLOR[SCREEN_COL80_HEIGHT-2][i] = color;
+        TEXT_WRITE(win_NonePtr, i, MESSAGE_Y, line[i]);
+        COLOR_WRITE(win_NonePtr, i, MESSAGE_Y, color);
     }
     text_demap_vram();
 }

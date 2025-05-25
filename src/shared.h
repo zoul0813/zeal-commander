@@ -3,6 +3,8 @@
 #include <zos_video.h>
 #include "windows.h"
 
+#define MESSAGE_Y   (SCREEN_COL80_HEIGHT-2)
+
 extern const char *ERROR_STRINGS[ERR_DIR_NOT_EMPTY+1];
 extern const uint8_t ERROR_STRINGS_LEN;
 

@@ -92,8 +92,7 @@ void view_switch(View view) {
     SET_CURSOR_BLINK(0);
     switch(view) {
         case VIEW_NONE: {
-            // TODO: refresh the main display
-            draw_screen();
+            window_refresh();
         } break;
         case VIEW_HELP: {
             view_draw_help();
@@ -137,11 +136,20 @@ void execute(const char* path) {
 
 void handle_keypress(char key) {
     // " [1] Help [4] Rename [5] Copy [6] Move [7] Mkdir [8] Delete [9] Refresh [10] Quit";
+
     switch(key) {
         // help
         case KB_F1: {
             toggle_view(VIEW_HELP);
         } break;
+        // case KB_F11: {
+        //     window_refresh();
+        // } break;
+    }
+
+    if(active_view != VIEW_NONE) return;
+
+    switch(key) {
         // rename
         case KB_F4: {
             zc_entry_t *entry = entry_get_focus();
@@ -387,7 +395,7 @@ void file_list_highlight(zc_list_t *list) {
 
     text_map_vram();
     for(x = min_x; x < max_x; x++) {
-        SCR_COLOR[y][x] = COLOR(TEXT_COLOR_WHITE, TEXT_COLOR_DARK_BLUE);
+        COLOR_WRITE(list->window, x, y, COLOR(TEXT_COLOR_WHITE, TEXT_COLOR_DARK_BLUE));
     }
     text_demap_vram();
 
@@ -429,7 +437,7 @@ void file_list_select(zc_list_t *list, int8_t index) {
     }
     text_map_vram();
     for(x = min_x; x < max_x; x++) {
-        SCR_COLOR[y][x] = color;
+        COLOR_WRITE(list->window, x, y, color);
     }
     text_demap_vram();
 
@@ -590,12 +598,10 @@ void draw_screen(void) {
     SET_CURSOR_BLINK(0);
 
     const char *menu_main = " File Options";
-    SET_COLORS(FG_MENU, BG_MENU); // inverted
-    text_menu(0, 0, menu_main);
+    text_menu(0, 0, COLOR(BG_MENU, FG_MENU), menu_main);
 
     const char *menu_file = "[1] Help [4] Ren [5] Copy [6] Move [7] Mkdir [8] Del [9] Update [10] Quit";
-    SET_COLORS(TEXT_COLOR_DARK_GRAY, FG_MENU); // inverted
-    text_menu(0, SCREEN_COL80_HEIGHT-1, menu_file);
+    text_menu(0, SCREEN_COL80_HEIGHT-1, COLOR(FG_MENU, TEXT_COLOR_DARK_GRAY), menu_file);
 
     file_list_show(&list_left);
     file_list_show(&list_right);
@@ -611,11 +617,5 @@ int main(void) {
     while(1) {
         key = getkey();
         handle_keypress(key);
-
-        // // TODO: constantly resetting text scroll
-        // zvb_peri_text_scroll_y = 0;
-        // zvb_peri_text_scroll_x = 0;
     }
-
-    // return 0; // unreachable
 }
