@@ -36,6 +36,8 @@
 #define SCREEN_COL40_WIDTH  40
 #define SCREEN_COL40_HEIGHT 20
 
+#define SCREEN_FONT_SIZE    3072
+
 #define VIDEO_MODE_HIGH ZVB_CTRL_VID_MODE_TEXT_640
 #define VIDEO_MODE_LOW  ZVB_CTRL_VID_MODE_TEXT_320
 #ifndef VIDEO_MODE
@@ -105,13 +107,13 @@
 #define SET_X(x)                zvb_peri_text_curs_x = x
 #define SET_Y(y)                zvb_peri_text_curs_y = y
 #define SET_XY(x,y)             SET_X(x); SET_Y(y);
-// #define PRINT_CHAR(c)           zvb_peri_text_print_char = c
 
 extern uint8_t mmu_page_current;
 const __sfr __banked __at(0xF0) mmu_page0_ro;
 __sfr __at(0xF0) mmu_page0;
 uint8_t __at(0x0000) SCR_TEXT[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
 uint8_t __at(0x1000) SCR_COLOR[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
+uint8_t __at(0x3000) SCR_FONT[SCREEN_FONT_SIZE];
 
 extern uint8_t MIRROR_TEXT[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];
 extern uint8_t MIRROR_COLOR[SCREEN_COL80_HEIGHT][SCREEN_COL80_WIDTH];

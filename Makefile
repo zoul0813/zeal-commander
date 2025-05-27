@@ -1,8 +1,5 @@
 BIN=zc.bin
 
-EMU_NATIVE_BIN=../../zeal8bit/Zeal-NativeEmulator/builddir/zeal.elf
-EMU_NATIVE_ROM=../../zeal8bit/Zeal-NativeEmulator/roms/default.img
-
 ifndef ZVB_SDK_PATH
 	$(error "Failure: ZVB_SDK_PATH variable not found.  It must point to Zeal Video Board SDK path.")
 endif
@@ -27,7 +24,7 @@ all::
 	cp $(OUTPUT_DIR)/zc.bin $(OUTPUT_DIR)/test2/test.bin
 
 run:
-	$(EMU_NATIVE_BIN) -H bin -r $(EMU_NATIVE_ROM) -t tf.img -e eeprom.img
+	$(ZEAL_NATIVE_BIN) -H bin -r $(ZEAL_NATIVE_ROM) -t tf.img -e eeprom.img
 
 native: all run
 

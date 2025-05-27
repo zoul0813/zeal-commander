@@ -117,7 +117,11 @@ void execute(const char* path) {
     handle_error(err, "reset keyboard", 1);
 
     uint8_t retval;
-    exec(EXEC_PRESERVE_PROGRAM, path, NULL, &retval);
+    err = exec(EXEC_PRESERVE_PROGRAM, path, NULL, &retval);
+    if(err != ERR_SUCCESS) {
+        error(err, "Failed to execute");
+        return;
+    }
 
     if(retval != 0) {
         printf("\n\nExited with error $%02x\n", retval, retval);
@@ -131,7 +135,37 @@ void execute(const char* path) {
         key = getkey();
     } while(key != KB_KEY_ENTER);
 
-    draw_screen();
+    window_refresh();
+}
+
+zos_err_t setfont(const char* path) {
+    zos_dev_t dev = open(path, O_RDONLY);
+    if(dev < 0) {
+        // put_s(path); put_s(" not found\n");
+        error(err, "not found %s", path);
+        return -dev;
+    }
+
+    uint8_t buffer[SCREEN_FONT_SIZE];
+
+    uint16_t size = SCREEN_FONT_SIZE;
+    err = read(dev, buffer, &size);
+    if(err != ERR_SUCCESS) {
+        // put_s(path); put_s(" failed to read\n");
+        error(err, "failed to read %s", path);
+        return err;
+    }
+    err = close(dev);
+    if(err != ERR_SUCCESS) {
+        // put_s(path); put_s(" failed to close\n");
+        error(err, "failed to close %s", path);
+        return err;
+    }
+
+    text_map_vram();
+    memcpy(SCR_FONT, buffer, size);
+    text_demap_vram();
+    return ERR_SUCCESS;
 }
 
 void handle_keypress(char key) {
@@ -327,8 +361,23 @@ void handle_keypress(char key) {
                 path_resolve(entry->name, list_focus->path, path_src);
                 message("Execute %s\n", path_src);
                 execute(path_src);
-            } else if((entry->flags & FileFlag_Directory) == 0) {
-                error(ERR_NOT_A_DIR, "entry %s", list_focus->path);
+                break;
+            } else if((entry->flags & FileFlag_File)) {
+                // it's a file, ... can we do something with it?
+                uint8_t l = strlen(list_focus->path);
+                if(str_ends_with(entry->name, ".f12")) {
+                    path_resolve(entry->name, list_focus->path, path_src);
+                    // it's a font file, switch fonts?
+                    err = setfont(path_src);
+                    if(err != ERR_SUCCESS) {
+                        error(err, "setfont %s", list_focus->path);
+                    } else {
+                        message("Font: %s", list_focus->path);
+                    }
+                    break;
+                }
+                // we don't know what to do with it ...
+                error(ERR_NOT_A_DIR, "entry %s", &list_focus->path[l-4]);
                 break;
             } else {
                 err = path_resolve(entry->name, list_focus->path, path_src);
@@ -402,17 +451,17 @@ void file_list_highlight(zc_list_t *list) {
     if(list->selected == 0) {
         // up dir
         err = path_resolve("../", list->path, path_src);
-        message("%s", path_src);
-        return;
+        goto message;
     }
 
     zc_entry_t *entry = entry_get_focus();
     err = path_concat(entry->name, list_focus->path, path_src);
     if(err != ERR_SUCCESS) {
         error(err, "concat %s", path_src);
-    } else {
-        message("%s", path_src);
     }
+
+message:
+        message("%s", path_src);
 }
 
 void file_list_select(zc_list_t *list, int8_t index) {
