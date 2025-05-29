@@ -94,19 +94,19 @@
 #define CH_DOT          0xF9 // Vertically Centered "Dot"
 #endif
 
-#define COLOR(fg, bg)           ((bg << 4 & 0xF0) | (fg & 0xF))
+#define COLOR(fg, bg)           ((uint8_t)((bg << 4 & 0xF0) | (fg & 0xF)))
 #define GET_COLOR()             zvb_peri_text_color
 #define GET_COLOR_BG()          (zvb_peri_text_color >> 4 & 0x0F)
 #define GET_COLOR_FG()          (zvb_peri_text_color & 0x0F)
 #define SET_COLOR(c)            zvb_peri_text_color = c
-#define SET_COLORS(fg,bg)       zvb_peri_text_color = ((bg  << 4) | (fg & 0x0F))
+#define SET_COLORS(fg,bg)       zvb_peri_text_color = COLOR(fg,bg)
 #define GET_CURSOR_BLINK()      zvb_peri_text_curs_time
 #define SET_CURSOR_BLINK(cur)   zvb_peri_text_curs_time = cur
 #define GET_X()                 zvb_peri_text_curs_x
 #define GET_Y()                 zvb_peri_text_curs_y
 #define SET_X(x)                zvb_peri_text_curs_x = x
 #define SET_Y(y)                zvb_peri_text_curs_y = y
-#define SET_XY(x,y)             SET_X(x); SET_Y(y);
+#define SET_XY(x,y)             SET_X(x); SET_Y(y)
 
 extern uint8_t mmu_page_current;
 const __sfr __banked __at(0xF0) mmu_page0_ro;

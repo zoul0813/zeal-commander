@@ -27,8 +27,6 @@ typedef enum {
 
 */
 
-#define LIST_PAGE_SIZE   10
-
 /** DEFAULT THEME */
 #ifdef THEME_DEFAULT
 #define FG_PRIMARY              TEXT_COLOR_LIGHT_GRAY

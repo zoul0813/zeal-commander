@@ -3,7 +3,11 @@
 #include <zos_video.h>
 #include "windows.h"
 
-#define MESSAGE_Y   (SCREEN_COL80_HEIGHT-2)
+#define MESSAGE_Y           (SCREEN_COL80_HEIGHT-2)
+
+#define LIST_PAGE_SIZE      10
+#define LIST_VIEW_SIZE      34
+#define LIST_MAX_ENTRIES    256
 
 extern const char *ERROR_STRINGS[ERR_DIR_NOT_EMPTY+1];
 extern const uint8_t ERROR_STRINGS_LEN;

@@ -55,9 +55,6 @@ zos_err_t path_resolve(const char* path, const char* root, char *resolved) {
         l = 3;
     }
 
-    // must have a drive root
-    if(l < 3) return ERR_INVALID_PARAMETER;
-
     // if path starts with root, resolve to X:/
     if(a == PATH_SEPARATOR) {
         resolved[3] = NULL_TERM;

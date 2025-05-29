@@ -8,7 +8,7 @@
 #define KILOBYTE    (uint32_t)1024
 #define MEGABYTE    (uint32_t)(1024 * 1024)
 
-#define MAX_FILE_ENTRIES    33
+#define MAX_FILE_ENTRIES    34
 
 typedef enum {
     FileFlag_Directory = 1,
@@ -20,7 +20,7 @@ typedef enum {
 typedef struct {
     zc_file_flags flags;
     uint32_t size;
-    zos_date_t date;
+    // zos_date_t date;
     char name[FILENAME_LEN_MAX];
 } zc_entry_t;
 

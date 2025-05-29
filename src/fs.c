@@ -18,8 +18,12 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
     zos_dir_entry_t dir_entry;
     zos_stat_t entry_stat;
 
+    strcpy(list[0].name, "..");
+    list[0].flags = FileFlag_Directory;
+    list[0].size = 0;
+
     uint8_t i;
-    for(i = 0; i < MAX_FILE_ENTRIES; i++) {
+    for(i = 1; i < MAX_FILE_ENTRIES; i++) {
         err = readdir(d, &dir_entry);
         if(err == ERR_NO_MORE_ENTRIES) break;
         if(err != ERR_SUCCESS) {
@@ -40,7 +44,7 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
 
             entry->flags = FileFlag_File;
             entry->size = entry_stat.s_size;
-            memcpy(&entry->date, &entry_stat.s_date, sizeof(zos_date_t));
+            // memcpy(&entry->date, &entry_stat.s_date, sizeof(zos_date_t));
 
             if(str_ends_with(entry->name, ".bin") || str_pos(entry->name, '.') < 0) {
                 entry->flags |= FileFlag_Executable;
@@ -48,7 +52,7 @@ zos_err_t list(const char* path, zc_entry_t* list, uint8_t* size) {
         } else {
             entry->size = 0;
             entry->flags = FileFlag_Directory;
-            memset(&entry->date, 0, sizeof(zos_date_t));
+            // memset(&entry->date, 0, sizeof(zos_date_t));
         }
     }
     *size = i;

@@ -13,8 +13,8 @@
 
 #include "view_help.h"
 
-#define entry_get_focus() &list_focus->files[list_focus->selected - 1]
-#define entry_get_blur() &list_focus->files[list_focus->selected - 1]
+#define entry_get_focus() &list_focus->files[list_focus->selected]
+#define entry_get_blur() &list_focus->files[list_focus->selected]
 
 static zos_err_t err = ERR_SUCCESS;
 unsigned char key = 0;
@@ -32,6 +32,7 @@ typedef struct {
     const char path[PATH_MAX];
     uint8_t len;
     zc_entry_t files[MAX_FILE_ENTRIES];
+    uint8_t offset; // offset into files[]
     uint8_t selected;
     window_t *window;
 } zc_list_t;
@@ -83,9 +84,9 @@ void toggle_view(View view);
 void draw_screen(void);
 void file_list_show(zc_list_t *list);
 void file_list_highlight(zc_list_t *list);
-void file_list_select(zc_list_t *list, int8_t index);
+void file_list_select(zc_list_t *list, uint8_t index);
 void file_list_disks(zc_list_t *list);
-void execute(const char* path);
+zos_err_t execute(const char* path);
 
 void view_switch(View view) {
     previous_view = active_view;
@@ -108,7 +109,7 @@ void view_switch(View view) {
     return view_switch(view);
  }
 
-void execute(const char* path) {
+zos_err_t execute(const char* path) {
 
     err = ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
     handle_error(err, "reset_screen", 1);
@@ -118,16 +119,14 @@ void execute(const char* path) {
 
     uint8_t retval;
     err = exec(EXEC_PRESERVE_PROGRAM, path, NULL, &retval);
-    if(err != ERR_SUCCESS) {
-        error(err, "Failed to execute");
-        return;
-    }
+    if(err != ERR_SUCCESS) return err;
 
     if(retval != 0) {
         printf("\n\nExited with error $%02x\n", retval, retval);
     }
     printf("\n\nPress Enter to return to Zeal Commander...\n");
 
+    SET_CURSOR_BLINK(0);
     err = kb_mode_non_block_raw();
     handle_error(err, "re-init keyboard", 1);
 
@@ -136,6 +135,7 @@ void execute(const char* path) {
     } while(key != KB_KEY_ENTER);
 
     window_refresh();
+    return ERR_SUCCESS;
 }
 
 zos_err_t setfont(const char* path) {
@@ -358,9 +358,15 @@ void handle_keypress(char key) {
                 strcpy(list_focus->path, entry->name);
             } else if((entry->flags & FileFlag_Executable) != 0) {
                 // possible executable, execute it?
-                path_resolve(entry->name, list_focus->path, path_src);
-                message("Execute %s\n", path_src);
-                execute(path_src);
+                err = path_resolve(entry->name, list_focus->path, path_src);
+                if(err != ERR_SUCCESS) {
+                    error(err, "exec resolve");
+                }
+                message("Execute %s", path_src);
+                err = execute(path_src);
+                if(err != ERR_SUCCESS) {
+                    error(err, "Failed to execute");
+                }
                 break;
             } else if((entry->flags & FileFlag_File)) {
                 // it's a file, ... can we do something with it?
@@ -394,12 +400,16 @@ void handle_keypress(char key) {
 
         case KB_LEFT_ARROW: // fall-thru
         case KB_UP_ARROW: {
-            file_list_select(list_focus, list_focus->selected - 1);
+            if(list_focus->selected > 0) {
+                file_list_select(list_focus, list_focus->selected - 1);
+            }
         } break;
 
         case KB_RIGHT_ARROW: // fall-thru
         case KB_DOWN_ARROW: {
-            file_list_select(list_focus, list_focus->selected + 1);
+            if(list_focus->selected < list_focus->len) {
+                file_list_select(list_focus, list_focus->selected + 1);
+            }
         } break;
 
         case KB_PG_UP: {
@@ -411,7 +421,7 @@ void handle_keypress(char key) {
         case KB_PG_DOWN: {
             uint8_t selected = list_focus->selected;
             if(selected + LIST_PAGE_SIZE <= list_focus->len) selected += LIST_PAGE_SIZE;
-            else selected = list_focus->len;
+            else selected = list_focus->len - 1;
             file_list_select(list_focus, selected);
         } break;
 
@@ -419,7 +429,7 @@ void handle_keypress(char key) {
             file_list_select(list_focus, 0);
         } break;
         case KB_END: {
-            file_list_select(list_focus, list_focus->len);
+            file_list_select(list_focus, list_focus->len - 1);
         } break;
 
         case KB_KEY_TAB: {
@@ -438,48 +448,42 @@ void handle_keypress(char key) {
 void file_list_highlight(zc_list_t *list) {
 
     uint8_t min_x = list->window->x + 1;
-    uint8_t max_x = list->window->x + list->window->w - 2;
+    uint8_t max_x = list->window->x + list->window->w - 1;
     uint8_t y = list->window->y + list->selected + 2;  // title + column heading
     uint8_t x;
 
     text_map_vram();
+    // TODO: memset???
     for(x = min_x; x < max_x; x++) {
         COLOR_WRITE(list->window, x, y, COLOR(TEXT_COLOR_WHITE, TEXT_COLOR_DARK_BLUE));
     }
     text_demap_vram();
 
-    if(list->selected == 0) {
-        // up dir
-        err = path_resolve("../", list->path, path_src);
-        goto message;
-    }
-
     zc_entry_t *entry = entry_get_focus();
-    err = path_concat(entry->name, list_focus->path, path_src);
+
+    strcpy(path_dst, entry->name);
+    if(entry->flags & FileFlag_Directory) strcat(path_dst, "/");
+    err = path_resolve(path_dst, list_focus->path, path_src);
     if(err != ERR_SUCCESS) {
         error(err, "concat %s", path_src);
     }
 
-message:
-        message("%s", path_src);
+    message("%s", path_src);
 }
 
-void file_list_select(zc_list_t *list, int8_t index) {
+void file_list_select(zc_list_t *list, uint8_t index) {
     // (uint8_t) covers <0 and >len because neg is > 127
-    if((uint8_t)index > list->len) return; // invalid
-    zc_entry_t *previous = &list->files[list->selected - 1]; // -1 because `..` isn't in the list
+    if((uint8_t)index >= list->len) return; // invalid
+    zc_entry_t *previous = &list->files[list->selected]; // -1 because `..` isn't in the list
     zc_entry_t *next = &list->files[index];
 
     uint8_t color = COLOR(FG_SECONDARY, BG_SECONDARY);
     uint8_t min_x = list->window->x + 1;
-    uint8_t max_x = list->window->x + list->window->w - 2;
+    uint8_t max_x = list->window->x + list->window->w - 1;
     uint8_t y = list->window->y + list->selected + 2;  // title + column heading
     uint8_t x;
 
-    if(list->selected == 0) {
-        // UP-DIR
-        color = COLOR(FG_FOLDER, BG_SECONDARY);
-    } else if(previous->flags & FileFlag_Directory) {
+    if(previous->flags & FileFlag_Directory) {
         color = COLOR(FG_FOLDER, BG_SECONDARY);
     } else if(previous->flags & FileFlag_Executable) {
         color = COLOR(FG_EXEC, BG_SECONDARY);
@@ -523,17 +527,13 @@ void file_list_show(zc_list_t *the_list) {
     strcpy(str, "Size\n");
     window_gotox(w, w->w - 2 - strlen(str));
     window_puts_color(w, str, color);
-
     color = COLOR(FG_FOLDER, BG_SECONDARY);
-    strcpy(str, "..");
-    window_puts_color(w, str, color);
 
-    strcpy(str, "UP-DIR\n");
-    window_gotox(w, w->w - 2 - strlen(str));
-    window_puts_color(w, str, color);
+    zc_entry_t *entry = &the_list->files[0];
 
-
-    for(i = 0; i < the_list->len; i++) {
+    uint8_t len = the_list->len;
+    if(len > LIST_VIEW_SIZE) len = LIST_VIEW_SIZE;
+    for(i = 0; i < len; i++) {
         zc_entry_t *entry = &the_list->files[i];
         char prefix = ' ';
         char suffix = NULL_TERM;
@@ -559,7 +559,11 @@ void file_list_show(zc_list_t *the_list) {
         if(entry->flags & FileFlag_File) {
             sprintf(str, "%lu%c\n", size, size_suffix);
         } else {
-            strcpy(str, "-\n");
+            if(strcmp(entry->name, "..") == 0) {
+                strcpy(str, "UP-DIR\n");
+            } else {
+                strcpy(str, "-\n");
+            }
         }
         window_gotox(w, w->w - 2 - strlen(str));
         window_puts_color(w, str, color);
@@ -573,15 +577,18 @@ void file_list_show(zc_list_t *the_list) {
 }
 
 void file_list_disks(zc_list_t *the_list) {
+    uint8_t i;
     // show the disk list
     the_list->len = disks_len;
     strcpy(the_list->path, "");
-    for(uint8_t i = 0; i < disks_len; i++) {
+    for(i = 0; i < disks_len; i++) {
         memcpy(&the_list->files[i], &disks[i], sizeof(zc_entry_t));
     }
 }
 
 void init(void) {
+    uint8_t i;
+
     memset(&list_left, 0, sizeof(zc_list_t));
     list_left.window = &win_ListingLeft;
 
@@ -595,9 +602,9 @@ void init(void) {
     list_right.selected = 1;
 
     char letters[] = {'A','B','C','H','T'};
-    for(uint8_t i = 0; i < sizeof(letters); i++) {
+    for(i = 0; i < sizeof(letters); i++) {
         char letter = letters[i];
-        zos_err_t err = is_disk(letter);
+        err = is_disk(letter);
         if(err == ERR_SUCCESS) {
             zc_entry_t *drive = &disks[disks_len];
             strcpy(drive->name, "A:/");
@@ -646,8 +653,12 @@ void draw_screen(void) {
 
     SET_CURSOR_BLINK(0);
 
-    const char *menu_main = " File Options";
-    text_menu(0, 0, COLOR(BG_MENU, FG_MENU), menu_main);
+    // display the program banner, for now...
+    const char *menu_main = "Zeal Commander";
+    text_banner(0, 0, COLOR(BG_MENU, FG_MENU), 1, menu_main);
+    // TODO: implement a top menu eventually???
+    // const char *menu_main = " File Options";
+    // text_menu(0, 0, COLOR(BG_MENU, FG_MENU), menu_main);
 
     const char *menu_file = "[1] Help [4] Ren [5] Copy [6] Move [7] Mkdir [8] Del [9] Update [10] Quit";
     text_menu(0, SCREEN_COL80_HEIGHT-1, COLOR(FG_MENU, TEXT_COLOR_DARK_GRAY), menu_file);
