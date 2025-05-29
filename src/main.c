@@ -83,7 +83,8 @@ void view_switch(View view);
 void toggle_view(View view);
 void draw_screen(void);
 void file_list_show(zc_list_t *list);
-void file_list_highlight(zc_list_t *list);
+void file_list_highlight(zc_list_t *list, uint8_t color);
+void file_list_message(zc_list_t *list);
 void file_list_select(zc_list_t *list, uint8_t index);
 void file_list_disks(zc_list_t *list);
 zos_err_t execute(const char* path);
@@ -445,7 +446,7 @@ void handle_keypress(char key) {
     }
 }
 
-void file_list_highlight(zc_list_t *list) {
+void file_list_highlight(zc_list_t *list, uint8_t color) {
 
     uint8_t min_x = list->window->x + 1;
     uint8_t max_x = list->window->x + list->window->w - 1;
@@ -455,10 +456,13 @@ void file_list_highlight(zc_list_t *list) {
     text_map_vram();
     // TODO: memset???
     for(x = min_x; x < max_x; x++) {
-        COLOR_WRITE(list->window, x, y, COLOR(TEXT_COLOR_WHITE, TEXT_COLOR_DARK_BLUE));
+        COLOR_WRITE(list->window, x, y, color);
     }
     text_demap_vram();
+}
 
+void file_list_message(zc_list_t *list) {
+    (void)list;
     zc_entry_t *entry = entry_get_focus();
 
     strcpy(path_dst, entry->name);
@@ -478,24 +482,16 @@ void file_list_select(zc_list_t *list, uint8_t index) {
     zc_entry_t *next = &list->files[index];
 
     uint8_t color = COLOR(FG_SECONDARY, BG_SECONDARY);
-    uint8_t min_x = list->window->x + 1;
-    uint8_t max_x = list->window->x + list->window->w - 1;
-    uint8_t y = list->window->y + list->selected + 2;  // title + column heading
-    uint8_t x;
-
     if(previous->flags & FileFlag_Directory) {
         color = COLOR(FG_FOLDER, BG_SECONDARY);
     } else if(previous->flags & FileFlag_Executable) {
         color = COLOR(FG_EXEC, BG_SECONDARY);
     }
-    text_map_vram();
-    for(x = min_x; x < max_x; x++) {
-        COLOR_WRITE(list->window, x, y, color);
-    }
-    text_demap_vram();
+    file_list_highlight(list, color);
 
     list->selected = index;
-    file_list_highlight(list);
+    file_list_highlight(list, COLOR(FG_PRIMARY_HIGHLIGHT, BG_PRIMARY));
+    file_list_message(list);
 }
 
 void file_list_show(zc_list_t *the_list) {
@@ -573,7 +569,8 @@ void file_list_show(zc_list_t *the_list) {
 
 
     if(the_list->selected > the_list->len) the_list->selected = the_list->len;
-    file_list_highlight(the_list);
+    file_list_highlight(the_list, COLOR(FG_PRIMARY_HIGHLIGHT, BG_PRIMARY));
+    file_list_message(the_list);
 }
 
 void file_list_disks(zc_list_t *the_list) {
