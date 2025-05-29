@@ -8,7 +8,8 @@
 #define KILOBYTE    (uint32_t)1024
 #define MEGABYTE    (uint32_t)(1024 * 1024)
 
-#define MAX_FILE_ENTRIES    34
+// 255 + ".." == 256
+#define MAX_FILE_ENTRIES    255
 
 typedef enum {
     FileFlag_Directory = 1,

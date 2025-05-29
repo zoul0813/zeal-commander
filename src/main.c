@@ -83,6 +83,8 @@ void view_switch(View view);
 void toggle_view(View view);
 void draw_screen(void);
 void file_list_show(zc_list_t *list);
+void file_list_offset(zc_list_t* list);
+void file_list_render(zc_list_t* list);
 void file_list_highlight(zc_list_t *list, uint8_t color);
 void file_list_message(zc_list_t *list);
 void file_list_select(zc_list_t *list, uint8_t index);
@@ -337,6 +339,7 @@ void handle_keypress(char key) {
         // action
         case KB_KEY_ENTER: // fall-thru
         case KB_KEY_SPACE: {
+            // TODO: re-evaluate this, now that `..` is the first entry in dir lists
             if(list_focus->selected == 0) {
                 err = path_resolve("../", list_focus->path, path_src);
                 if(err == ERR_DISK_OFFSET) {
@@ -451,10 +454,10 @@ void file_list_highlight(zc_list_t *list, uint8_t color) {
     uint8_t min_x = list->window->x + 1;
     uint8_t max_x = list->window->x + list->window->w - 1;
     uint8_t y = list->window->y + list->selected + 2;  // title + column heading
+    y -= list->offset;
     uint8_t x;
 
     text_map_vram();
-    // TODO: memset???
     for(x = min_x; x < max_x; x++) {
         COLOR_WRITE(list->window, x, y, color);
     }
@@ -490,8 +493,89 @@ void file_list_select(zc_list_t *list, uint8_t index) {
     file_list_highlight(list, color);
 
     list->selected = index;
+    file_list_offset(list);
+
     file_list_highlight(list, COLOR(FG_PRIMARY_HIGHLIGHT, BG_PRIMARY));
     file_list_message(list);
+}
+
+void file_list_offset(zc_list_t* list) {
+    uint8_t current_page = list->offset / LIST_VIEW_SIZE;
+    uint8_t target_page = list->selected / LIST_VIEW_SIZE;
+    if(current_page != target_page) {
+        list->offset = target_page * LIST_VIEW_SIZE;
+        file_list_render(list);
+    }
+}
+
+void file_list_render(zc_list_t* list) {
+    uint8_t color, i;
+    // const char str[FILENAME_LEN_MAX + 2];
+    zc_entry_t *entry;
+
+    window_t *w = list->window;
+    uint8_t len = list->len - list->offset;
+
+    color = COLOR(FG_HEADING, BG_SECONDARY);
+    window_gotoxy(w, 0, 0);
+    strcpy(path_src, "Name");
+    window_puts_color(w, path_src, color);
+
+    strcpy(path_src, "Size\n");
+    window_gotox(w, w->w - 2 - strlen(path_src));
+    window_puts_color(w, path_src, color);
+
+    if(len > LIST_VIEW_SIZE) len = list->offset + LIST_VIEW_SIZE;
+    else len += list->offset;
+    for(i = list->offset; i < len; i++) {
+        entry = &list->files[i];
+
+        // filetype
+        char prefix = ' ';
+        color = COLOR(FG_SECONDARY, BG_SECONDARY);
+        if(entry->flags & FileFlag_Executable) {
+            color = COLOR(FG_EXEC, BG_SECONDARY);
+            prefix = '*';
+        } else if(entry->flags & FileFlag_Directory) {
+            color = COLOR(FG_FOLDER, BG_SECONDARY);
+            prefix = '/';
+        }
+
+        // filename
+        sprintf(path_src, "%c%-16s", prefix, entry->name);
+        window_puts_color(w, path_src, color);
+
+        // filesize
+        uint32_t size = entry->size;
+        char size_suffix = 'B';
+        if(size > KILOBYTE) {
+            size = size / KILOBYTE;
+            size_suffix = 'K';
+        }
+        if(entry->flags & FileFlag_File) {
+            sprintf(path_src, "%lu%c\n", size, size_suffix);
+        } else {
+            if(strcmp(entry->name, "..") == 0) {
+                strcpy(path_src, "UP-DIR\n");
+            } else {
+                strcpy(path_src, "-\n");
+            }
+        }
+        sprintf(path_dst, "%8s", path_src);
+        // right align the filesize
+        window_gotox(w, w->w - 2 - strlen(path_dst));
+        window_puts_color(w, path_dst, color);
+    }
+
+    // clear remaining rows
+    color = COLOR(FG_SECONDARY, BG_SECONDARY);
+    i -= list->offset;
+    for(; i < LIST_VIEW_SIZE; i++) {
+        sprintf(path_src, "%c%-16s%c", ' ', " ", ' ');
+        window_puts_color(w, path_src, color);
+        window_gotox(w, w->w - 2 - strlen(path_src));
+        window_puts_color(w, path_src, color);
+    }
 }
 
 void file_list_show(zc_list_t *the_list) {
@@ -504,9 +588,6 @@ void file_list_show(zc_list_t *the_list) {
     }
 
     window_t *w = the_list->window;
-    uint8_t i;
-    uint8_t color = COLOR(FG_HEADING, BG_SECONDARY);
-    const char str[FILENAME_LEN_MAX + 2];
 
     w->title = the_list->path;
     window(w);
@@ -516,59 +597,9 @@ void file_list_show(zc_list_t *the_list) {
         window_active(w, 0);
     }
 
-    window_gotoxy(w, 0, 0);
-    strcpy(str, "Name");
-    window_puts_color(w, str, color);
+    file_list_render(the_list);
 
-    strcpy(str, "Size\n");
-    window_gotox(w, w->w - 2 - strlen(str));
-    window_puts_color(w, str, color);
-    color = COLOR(FG_FOLDER, BG_SECONDARY);
-
-    zc_entry_t *entry = &the_list->files[0];
-
-    uint8_t len = the_list->len;
-    if(len > LIST_VIEW_SIZE) len = LIST_VIEW_SIZE;
-    for(i = 0; i < len; i++) {
-        zc_entry_t *entry = &the_list->files[i];
-        char prefix = ' ';
-        char suffix = NULL_TERM;
-        color = COLOR(FG_SECONDARY, BG_SECONDARY);
-        if(entry->flags & FileFlag_Executable) {
-            color = COLOR(FG_EXEC, BG_SECONDARY);
-            suffix = '*';
-        } else if(entry->flags & FileFlag_Directory) {
-            color = COLOR(FG_FOLDER, BG_SECONDARY);
-            prefix = '/';
-        }
-
-        uint32_t size = entry->size;
-        char size_suffix = 'B';
-        if(size > KILOBYTE) {
-            size = size / KILOBYTE;
-            size_suffix = 'K';
-        }
-
-        sprintf(str, "%c%s%c", prefix, entry->name, suffix);
-        window_puts_color(w, str, color);
-
-        if(entry->flags & FileFlag_File) {
-            sprintf(str, "%lu%c\n", size, size_suffix);
-        } else {
-            if(strcmp(entry->name, "..") == 0) {
-                strcpy(str, "UP-DIR\n");
-            } else {
-                strcpy(str, "-\n");
-            }
-        }
-        window_gotox(w, w->w - 2 - strlen(str));
-        window_puts_color(w, str, color);
-    }
-
-    SET_COLORS(FG_PRIMARY, BG_PRIMARY);
-
-
-    if(the_list->selected > the_list->len) the_list->selected = the_list->len;
+    if(the_list->selected > (the_list->len - 1)) the_list->selected = the_list->len - 1;
     file_list_highlight(the_list, COLOR(FG_PRIMARY_HIGHLIGHT, BG_PRIMARY));
     file_list_message(the_list);
 }
@@ -651,8 +682,8 @@ void draw_screen(void) {
     SET_CURSOR_BLINK(0);
 
     // display the program banner, for now...
-    const char *menu_main = "Zeal Commander";
-    text_banner(0, 0, COLOR(BG_MENU, FG_MENU), 1, menu_main);
+    // const char *menu_main = "Zeal Commander";
+    text_banner(0, 0, COLOR(BG_MENU, FG_MENU), 1, "Zeal Commander");
     // TODO: implement a top menu eventually???
     // const char *menu_main = " File Options";
     // text_menu(0, 0, COLOR(BG_MENU, FG_MENU), menu_main);
