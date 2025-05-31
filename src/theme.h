@@ -1,6 +1,8 @@
 #include <zos_video.h>
 
 #define THEME_DEFAULT
+// #define THEME_DARK
+// #define THEME_BRIGHT
 
 #ifndef THEME_H
 #define THEM_H
@@ -56,7 +58,7 @@ typedef enum {
 #ifdef THEME_DARK
 #define FG_PRIMARY              TEXT_COLOR_LIGHT_GRAY
 #define FG_PRIMARY_HIGHLIGHT    TEXT_COLOR_WHITE
-#define BG_PRIMARY              TEXT_COLOR_BLACK
+#define BG_PRIMARY              TEXT_COLOR_DARK_GRAY
 #define BORDER_PRIMARY          TEXT_COLOR_DARK_BLUE
 
 #define FG_FOLDER   TEXT_COLOR_WHITE
@@ -80,7 +82,7 @@ typedef enum {
 #ifdef THEME_BRIGHT
 #define FG_PRIMARY              TEXT_COLOR_LIGHT_GRAY
 #define FG_PRIMARY_HIGHLIGHT    TEXT_COLOR_WHITE
-#define BG_PRIMARY              TEXT_COLOR_BLACK
+#define BG_PRIMARY              TEXT_COLOR_DARK_CYAN
 #define BORDER_PRIMARY          TEXT_COLOR_DARK_BLUE
 
 #define FG_FOLDER   TEXT_COLOR_WHITE
@@ -100,17 +102,19 @@ typedef enum {
 #define BG_MESSAGE  TEXT_COLOR_BLACK
 #endif
 
-// #define CH_NEWLINE      0x0A // New line
-// #define CH_SPACE        0x20 // Space
-// #define CH_TAB          0x09   /* tabulator */
-// #define CH_ULCORNER     0xDA // Top Left
-// #define CH_URCORNER     0xBF // Top Right
-// #define CH_LLCORNER     0xC0 // Bottom Left
-// #define CH_LRCORNER     0xD9 // Bottom Right
-// #define CH_HLINE        0xC4 // Horizonal line
-// #define CH_VLINE        0xB3 // Vertical line
-// #define CH_DOT          0xF9 // Vertically Centered "Dot"
-
+// #define CH_NEWLINE          0x0A // New line
+// #define CH_SPACE            0x20 // Space
+// #define CH_TAB              0x09   /* tabulator */
+// #define CH_ULCORNER         0xDA // Top Left
+// #define CH_URCORNER         0xBF // Top Right
+// #define CH_LLCORNER         0xC0 // Bottom Left
+// #define CH_LRCORNER         0xD9 // Bottom Right
+// #define CH_HLINE            0xC4 // Horizonal line
+// #define CH_VLINE            0xB3 // Vertical line
+// #define CH_DOT              0xF9 // Vertically Centered "Dot"
+#define CH_DOT              0xAF // The `>>` symbol
+#define CH_BRACKET_LEFT     '[' // The `[-` symbol
+#define CH_BRACKET_RIGHT    ']' // The `-]` symbol
 
 #define CH_TREE_BRANCH  195
 #define CH_TREE_LEAF    196

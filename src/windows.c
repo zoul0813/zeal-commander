@@ -89,9 +89,9 @@ void window(window_t* w)
             x = min_x + ((w->w - len) >> 1);
         }
         y = min_y;
-        TEXT_WRITE(w, x, y, '[');
+        TEXT_WRITE(w, x, y, CH_BRACKET_LEFT);
         x++;
-        TEXT_WRITE(w, x, y, ' ');
+        TEXT_WRITE(w, x, y, CH_SPACE);
 
         for (int i = 0; i < SCREEN_COL80_WIDTH; i++) {
             unsigned char c = w->title[i];
@@ -101,9 +101,9 @@ void window(window_t* w)
             TEXT_WRITE(w, x, y, c);
         }
         x++;
-        TEXT_WRITE(w, x, y, ' ');
+        TEXT_WRITE(w, x, y, CH_SPACE);
         x++;
-        TEXT_WRITE(w, x, y, ']');
+        TEXT_WRITE(w, x, y, CH_BRACKET_RIGHT);
     }
 
     if ((w->flags & WIN_SHADOW) > 0) {
@@ -114,12 +114,12 @@ void window(window_t* w)
         min_y++;
         max_x++;
         for (y = min_y; y <= max_y; y++) {
-            TEXT_WRITE(w, x, y, ' ');
+            TEXT_WRITE(w, x, y, CH_SPACE);
             COLOR_WRITE(w, x, y, COLOR(w->fg, TEXT_COLOR_BLACK));
         }
 
         for (x = min_x; x <= max_x; x++) {
-            TEXT_WRITE(w, x, y, ' ');
+            TEXT_WRITE(w, x, y, CH_SPACE);
             COLOR_WRITE(w, x, y, COLOR(w->fg, TEXT_COLOR_BLACK));
         }
     }
@@ -145,7 +145,7 @@ void window_active(window_t* w, uint8_t active)
     uint8_t len = strlen(w->title) + 4;
 
     if (w->flags & WIN_TITLE_LEFT) {
-        x = x + 1;
+        // do nothing
     } else if (w->flags & WIN_TITLE_RIGHT) {
         x = x + (w->w - len) - 1;
     } else {
@@ -212,7 +212,7 @@ void window_clrscr(window_t* w)
     text_map_vram();
     for (y = min_y; y <= max_y; y++) {
         for (x = min_x; x <= max_x; x++) {
-            TEXT_WRITE(w, x, y, ' ');
+            TEXT_WRITE(w, x, y, CH_SPACE);
             COLOR_WRITE(w, x, y, color);
         }
     }
@@ -229,7 +229,7 @@ void window_clreol(window_t* w)
 
     text_map_vram();
     for (x = min_x; x <= max_x; x++) {
-        TEXT_WRITE(w, x, y, ' ');
+        TEXT_WRITE(w, x, y, CH_SPACE);
         COLOR_WRITE(w, x, y, color);
     }
     text_demap_vram();
@@ -282,7 +282,7 @@ uint8_t window_putc_color(window_t* w, char c, uint8_t color)
             if (tab_width == 0)
                 tab_width = 4;
             for (x = min_x; x < tab_width; x++) {
-                TEXT_WRITE(w, x, y, ' ');
+                TEXT_WRITE(w, x, y, CH_SPACE);
                 COLOR_WRITE(w, x, y, color);
             }
             w->_attrs.pos_x += tab_width;
@@ -374,7 +374,7 @@ void _text_banner(uint8_t x, uint8_t y, uint8_t c, uint8_t centered, window_t* w
 
         text_map_vram();
         for (uint8_t i = 0; i < pad; i++) {
-            TEXT_WRITE(win_NonePtr, x, y, ' ');
+            TEXT_WRITE(win_NonePtr, x, y, CH_SPACE);
             COLOR_WRITE(win_NonePtr, x, y, c);
             x++;
         }
@@ -386,7 +386,7 @@ void _text_banner(uint8_t x, uint8_t y, uint8_t c, uint8_t centered, window_t* w
         }
 
         for (uint8_t i = 0; i < (width - len - pad); i++) {
-            TEXT_WRITE(win_NonePtr, x, y, ' ');
+            TEXT_WRITE(win_NonePtr, x, y, CH_SPACE);
             COLOR_WRITE(win_NonePtr, x, y, c);
             x++;
         }

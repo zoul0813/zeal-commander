@@ -535,7 +535,7 @@ void file_list_render(zc_list_t* list) {
         color = COLOR(FG_SECONDARY, BG_SECONDARY);
         if(entry->flags & FileFlag_Executable) {
             color = COLOR(FG_EXEC, BG_SECONDARY);
-            prefix = '*';
+            prefix = CH_DOT;
         } else if(entry->flags & FileFlag_Directory) {
             color = COLOR(FG_FOLDER, BG_SECONDARY);
             prefix = '/';

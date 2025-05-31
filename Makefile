@@ -7,13 +7,12 @@ endif
 
 include $(ZVB_SDK_PATH)/sdcc/base_sdcc.mk
 
-all::
+demo: all
 	@echo "Creating sample data in " $(OUTPUT_DIR)
 	@mkdir -p $(OUTPUT_DIR)/tmp
 	@mkdir -p $(OUTPUT_DIR)/test1
 	@head -c $$(( (RANDOM % 255) + 1 )) </dev/urandom > $(OUTPUT_DIR)/test1/file1a.txt
 	@head -c $$(( (RANDOM % 255) + 1 )) </dev/urandom >  $(OUTPUT_DIR)/test1/file1b.txt
-	@cp ls.bin $(OUTPUT_DIR)/test1/simple.bin
 
 	@mkdir -p $(OUTPUT_DIR)/test2
 	@cp $(OUTPUT_DIR)/zc.bin $(OUTPUT_DIR)/test2/test.bin
